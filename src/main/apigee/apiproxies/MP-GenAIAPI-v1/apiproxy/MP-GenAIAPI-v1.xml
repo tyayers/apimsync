@@ -1,0 +1,22 @@
+<APIProxy revision="1" name="MP-GenAIAPI-v1">
+    <DisplayName></DisplayName>
+    <Description>This API provides Gen AI services.</Description>
+    <CreatedAt>1716907710653</CreatedAt>
+    <LastModifiedAt>1716907710653</LastModifiedAt>
+    <BasePaths>/v1/genai</BasePaths>
+    <Policies>
+        <Policy>AM-SetGeminiData</Policy>
+        <Policy>EV-GetInputs</Policy>
+        <Policy>JS-SetGeminiResponse</Policy>
+        <Policy>RF-ValidateInputs</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://gemini-functions.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>GeminiAPI</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

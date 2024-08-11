@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="false" enabled="true" name="AM-SetGeminiData">
+  <DisplayName>AM-SetGeminiData</DisplayName>
+  <Properties/>
+  <Set>
+    <Payload contentType="application/json">
+      {
+        "contents": [
+          {
+            "role": "USER",
+            "parts": [
+              {
+                "text": "{genai.prompt}"
+              }
+            ]
+          }
+        ]
+      }
+    </Payload>
+  </Set>
+  <AssignVariable>
+    <Name>target.copy.pathsuffix</Name>
+    <Value>false</Value>
+  </AssignVariable>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

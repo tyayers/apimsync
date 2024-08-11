@@ -1,0 +1,23 @@
+<APIProxy revision="1" name="Trading-v1">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1708589013162</CreatedAt>
+    <LastModifiedAt>1708589013162</LastModifiedAt>
+    <BasePaths>/transactions</BasePaths>
+    <Policies>
+        <Policy>AM-RemoveApiKey</Policy>
+        <Policy>ConvertResponse</Policy>
+        <Policy>SetQuery</Policy>
+        <Policy>VA-VerifyKey</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://ConvertResponse.js</Resource>
+        <Resource>jsc://SetQuery.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

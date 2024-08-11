@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+  <Description/>
+  <FaultRules/>
+  <Flows>
+    <Flow name="RefreshAccessToken">
+      <Description/>
+      <Request>
+        <Step>
+          <FaultRules/>
+          <Name>RefreshAccessToken</Name>
+        </Step>
+      </Request>
+      <Response/>
+      <Condition>(proxy.pathsuffix MatchesPath "/refresh_accesstoken") and (request.verb = "POST")</Condition>
+    </Flow>
+    <Flow name="AccessTokenClientCredential">
+      <Description/>
+      <Request>
+        <Step>
+          <FaultRules/>
+          <Name>GenerateAccessTokenClient</Name>
+        </Step>
+      </Request>
+      <Response/>
+      <Condition>(proxy.pathsuffix MatchesPath "/accesstoken") and (request.verb = "POST")</Condition>
+    </Flow>
+  </Flows>
+  <HTTPProxyConnection>
+    <BasePath>/v1/advapisec/oauth/client_credential</BasePath>
+    <Properties/>
+    <VirtualHost>secure</VirtualHost>
+  </HTTPProxyConnection>
+  <RouteRule name="NoRoute"/>
+</ProxyEndpoint>

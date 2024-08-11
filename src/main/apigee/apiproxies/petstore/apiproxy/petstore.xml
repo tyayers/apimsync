@@ -1,0 +1,21 @@
+<APIProxy revision="1" name="petstore">
+    <DisplayName>petstore</DisplayName>
+    <Description>This is a sample server Petstore server. For this sample, you can use the api key `special-key` to test the authorization filters. </Description>
+    <CreatedAt>1713441433316</CreatedAt>
+    <LastModifiedAt>1713441433316</LastModifiedAt>
+    <BasePaths>/v2</BasePaths>
+    <Policies>
+        <Policy>OAuth-v20-1</Policy>
+        <Policy>OpenAPI-Spec-Validation-1</Policy>
+        <Policy>Verify-API-Key-api_key</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>oas://petstore.yaml</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="false" enabled="true" name="AM-SetVariables">
+  <DisplayName>AM-SetVariables</DisplayName>
+  <Properties/>
+  <AssignVariable>
+    <Name>result.developerData</Name>
+    <Value>{}</Value>
+  </AssignVariable>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

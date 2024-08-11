@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+        
+    <Description>Generated SOAP to API proxy from NumberConversion</Description>
+        
+    <FaultRules/>
+        
+    <PreFlow name="PreFlow">
+                
+        <Request>
+                        
+            <Step>
+                                
+                <Name>extract-format</Name>
+                            
+            </Step>
+                    
+        </Request>
+                
+        <Response/>
+            
+    </PreFlow>
+        
+    <PostFlow name="PostFlow">
+                
+        <Request/>
+                
+        <Response/>
+            
+    </PostFlow>
+        
+    <Flows>
+        <Flow name="GetOAS">
+            <Description>Get OpenAPI Specification</Description>
+            <Request>
+                <Step>
+                    <Name>return-open-api</Name>
+                </Step>
+            </Request>
+            <Response/>
+            <Condition>(proxy.pathsuffix MatchesPath "/openapi.json") and (request.verb = "GET")</Condition>
+        </Flow>
+        <Flow name="NumberToWords">
+            <Description>NumberToWords</Description>
+            <Request>
+                <Step>
+                    <Name>NumberToWords-extract-query-param</Name>
+                </Step>
+                <Step>
+                    <Name>NumberToWords-build-soap</Name>
+                </Step>
+                <Step>
+                    <Name>remove-empty-nodes</Name>
+                    <Condition>(verb == "GET")</Condition>
+                </Step>
+            </Request>
+            <Response/>
+            <Condition>(proxy.pathsuffix MatchesPath "/numbertowords") and (request.verb = "GET")</Condition>
+        </Flow>
+        <Flow name="NumberToDollars">
+            <Description>NumberToDollars</Description>
+            <Request>
+                <Step>
+                    <Name>NumberToDollars-extract-query-param</Name>
+                </Step>
+                <Step>
+                    <Name>NumberToDollars-build-soap</Name>
+                </Step>
+                <Step>
+                    <Name>remove-empty-nodes</Name>
+                    <Condition>(verb == "GET")</Condition>
+                </Step>
+            </Request>
+            <Response/>
+            <Condition>(proxy.pathsuffix MatchesPath "/numbertodollars") and (request.verb = "GET")</Condition>
+        </Flow>
+        <Flow name="unknown-resource">
+            <Description>Unknown Resource</Description>
+            <Request>
+                <Step>
+                    <Name>unknown-resource</Name>
+                    <Condition>(verb != "GET" AND contentformat == "application/json") OR (verb == "GET" AND acceptformat !~ "*/xml")</Condition>
+                </Step>
+                <Step>
+                    <Name>unknown-resource-xml</Name>
+                    <Condition>(verb != "GET" AND contentformat != "application/json") OR (verb == "GET" AND acceptformat ~ "*/xml")</Condition>
+                </Step>
+            </Request>
+            <Response/>
+            <Condition/>
+        </Flow>
+    </Flows>
+        
+    <HTTPProxyConnection>
+                
+        <BasePath>/numberconversion</BasePath>
+                
+        <Properties/>
+            
+        <VirtualHost>default</VirtualHost>
+    </HTTPProxyConnection>
+        
+    <RouteRule name="default">
+                
+        <TargetEndpoint>default</TargetEndpoint>
+            
+    </RouteRule>
+    
+</ProxyEndpoint>

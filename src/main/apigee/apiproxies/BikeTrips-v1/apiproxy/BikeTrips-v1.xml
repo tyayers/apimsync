@@ -1,0 +1,21 @@
+<APIProxy revision="1" name="BikeTrips-v1">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1707992958451</CreatedAt>
+    <LastModifiedAt>1707992958451</LastModifiedAt>
+    <BasePaths>/trips</BasePaths>
+    <Policies>
+        <Policy>ConvertResponse</Policy>
+        <Policy>SetQuery</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://ConvertResponse.js</Resource>
+        <Resource>jsc://SetQuery.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

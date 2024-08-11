@@ -1,0 +1,13 @@
+<APIProxy revision="1" name="advapisec-httpbin">
+    <DisplayName>Httpbin</DisplayName>
+    <Description>An example API proxy.</Description>
+    <CreatedAt>1706176412473</CreatedAt>
+    <LastModifiedAt>1706176412473</LastModifiedAt>
+    <BasePaths>/v1/advapisec/httpbin</BasePaths>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage name="SetContentTypeJson">
+    <AssignTo createNew="false" type="response"/>
+    <Set>
+        <Headers>
+            <Header name="Content-Type">application/json</Header>
+        </Headers>
+    </Set>
+    <Condition>(proxy.pathsuffix MatchesPath "/ai-plugin.json")</Condition>
+</AssignMessage>

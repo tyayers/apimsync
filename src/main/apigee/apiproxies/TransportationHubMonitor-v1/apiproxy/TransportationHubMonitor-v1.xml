@@ -1,0 +1,17 @@
+<APIProxy revision="1" name="TransportationHubMonitor-v1">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1710359806498</CreatedAt>
+    <LastModifiedAt>1710359806498</LastModifiedAt>
+    <BasePaths>/crowd-monitor</BasePaths>
+    <Policies>
+        <Policy>AM-RemoveApiKey</Policy>
+        <Policy>VA-VerifyKey</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

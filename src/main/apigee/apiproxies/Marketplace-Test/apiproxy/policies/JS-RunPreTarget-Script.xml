@@ -1,0 +1,6 @@
+<Javascript name="JS-RunPreTarget-Script">
+  <DisplayName>JS-RunPreTarget-Script</DisplayName>
+  <Properties/>
+  <ResourceURL>jsc://bigquery_pretarget.js</ResourceURL>
+  <IncludeURL>jsc://bigquery_functions.js</IncludeURL>
+</Javascript>

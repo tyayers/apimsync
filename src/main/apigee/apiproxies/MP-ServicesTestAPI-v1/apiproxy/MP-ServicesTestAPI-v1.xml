@@ -1,0 +1,26 @@
+<APIProxy revision="1" name="MP-ServicesTestAPI-v1">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1716907722162</CreatedAt>
+    <LastModifiedAt>1716907722162</LastModifiedAt>
+    <BasePaths>/v1/test/services</BasePaths>
+    <Policies>
+        <Policy>AM-RemoveKey</Policy>
+        <Policy>AM-SetTargetVariables</Policy>
+        <Policy>CORS-SetCors</Policy>
+        <Policy>EV-ExtractName</Policy>
+        <Policy>KVM-GetVariables</Policy>
+        <Policy>VA-VerifyKey</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://bigquery_functions.js</Resource>
+        <Resource>jsc://bigquery_posttarget.js</Resource>
+        <Resource>jsc://bigquery_pretarget.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

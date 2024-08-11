@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Javascript continueOnError="false" enabled="true" timeLimit="200" name="JS-SetGeminiResponse">
+  <DisplayName>JS-SetGeminiResponse</DisplayName>
+  <Properties/>
+  <ResourceURL>jsc://gemini-functions.js</ResourceURL>
+</Javascript>

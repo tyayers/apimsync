@@ -1,0 +1,23 @@
+<APIProxy revision="1" name="BikeTrips-v2">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1709010440435</CreatedAt>
+    <LastModifiedAt>1709010440435</LastModifiedAt>
+    <BasePaths>/v2/trips</BasePaths>
+    <Policies>
+        <Policy>AM-RemoveApiKey</Policy>
+        <Policy>ConvertResponse</Policy>
+        <Policy>SetQuery</Policy>
+        <Policy>VA-VerifyKey</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://ConvertResponse.js</Resource>
+        <Resource>jsc://SetQuery.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

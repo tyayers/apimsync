@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RaiseFault continueOnError="false" enabled="true" name="RF-ValidateInputs">
+  <DisplayName>RF-ValidateInputs</DisplayName>
+  <Properties/>
+  <FaultResponse>
+    <Set>
+      <Headers/>
+      <Payload contentType="text/plain">
+      Incorrect inputs.
+      </Payload>
+      <StatusCode>400</StatusCode>
+      <ReasonPhrase>Incorrect input parameters</ReasonPhrase>
+    </Set>
+  </FaultResponse>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+</RaiseFault>

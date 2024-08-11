@@ -1,0 +1,17 @@
+<APIProxy revision="1" name="advapisec-oauth">
+    <DisplayName>oauth</DisplayName>
+    <Description>An API proxy that enforces OAuth 2.0 Client Credential Grant flow</Description>
+    <CreatedAt>1706176411689</CreatedAt>
+    <LastModifiedAt>1706176411689</LastModifiedAt>
+    <BasePaths>/v1/advapisec/oauth/client_credential</BasePaths>
+    <Policies>
+        <Policy>GenerateAccessTokenClient</Policy>
+        <Policy>RefreshAccessToken</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

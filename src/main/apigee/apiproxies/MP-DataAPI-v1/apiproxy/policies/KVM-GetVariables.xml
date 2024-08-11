@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<KeyValueMapOperations continueOnError="false" enabled="true" name="KVM-GetVariables" mapIdentifier="marketplace-kvm">
+  <DisplayName>KVM-GetVariables</DisplayName>
+  <Properties/>
+  <ExclusiveCache>false</ExclusiveCache>
+  <ExpiryTimeInSecs>300</ExpiryTimeInSecs>
+  <Get assignTo="data.lookup" index="1">
+    <Key>
+      <Parameter ref="entityName"/>
+    </Key>
+  </Get>
+  <Scope>environment</Scope>
+</KeyValueMapOperations>

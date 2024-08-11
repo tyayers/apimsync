@@ -1,0 +1,19 @@
+<APIProxy revision="1" name="advapisec-hello-world">
+    <DisplayName>Hello World</DisplayName>
+    <Description>An example API proxy.</Description>
+    <CreatedAt>1706176414095</CreatedAt>
+    <LastModifiedAt>1706176414095</LastModifiedAt>
+    <BasePaths>/v1/advapisec/hello-world</BasePaths>
+    <Policies>
+        <Policy>JavaScript-1</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://print-fv.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

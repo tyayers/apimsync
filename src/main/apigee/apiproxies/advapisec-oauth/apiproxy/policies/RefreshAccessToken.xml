@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OAuthV2 name="RefreshAccessToken">
+  <Operation>RefreshAccessToken</Operation>
+  <!-- This is in millseconds, so expire in half an hour -->
+  <ExpiresIn>1800000</ExpiresIn>
+  <GrantType>request.queryparam.grant_type</GrantType>
+  <GenerateResponse/>
+</OAuthV2>

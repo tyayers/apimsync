@@ -1,0 +1,37 @@
+<APIProxy revision="1" name="NumbersAPI-v1">
+    <DisplayName>NumberConversion</DisplayName>
+    <Description>Generated SOAP to API proxy from NumberConversion</Description>
+    <CreatedAt>1712903985539</CreatedAt>
+    <LastModifiedAt>1712903985539</LastModifiedAt>
+    <BasePaths>/numberconversion</BasePaths>
+    <Policies>
+        <Policy>return-open-api</Policy>
+        <Policy>NumberToWords-extract-query-param</Policy>
+        <Policy>NumberToWords-build-soap</Policy>
+        <Policy>NumberToDollars-extract-query-param</Policy>
+        <Policy>NumberToDollars-build-soap</Policy>
+        <Policy>xml-to-json</Policy>
+        <Policy>set-response-soap-body</Policy>
+        <Policy>set-response-soap-body-accept</Policy>
+        <Policy>get-response-soap-body</Policy>
+        <Policy>get-response-soap-body-xml</Policy>
+        <Policy>set-target-url</Policy>
+        <Policy>extract-format</Policy>
+        <Policy>unknown-resource</Policy>
+        <Policy>unknown-resource-xml</Policy>
+        <Policy>remove-empty-nodes</Policy>
+        <Policy>return-generic-error</Policy>
+        <Policy>return-generic-error-accept</Policy>
+        <Policy>remove-namespaces</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>xsl://remove-empty-nodes.xslt</Resource>
+        <Resource>xsl://remove-namespaces.xslt</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

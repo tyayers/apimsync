@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage async="false" continueOnError="true" enabled="true" name="NumberToWords-build-soap">
+        
+    <DisplayName>NumberToWords Build SOAP</DisplayName>
+        
+    <Add>
+                
+        <Headers>
+                        
+            <Header name="SOAPAction"/>
+                    
+        </Headers>
+            
+    </Add>
+        
+    <Set>
+                
+        <Headers>
+                        
+            <Header name="Content-Type">text/xml; charset=utf-8</Header>
+                    
+        </Headers>
+                
+        <Payload contentType="text/xml">
+            <s11:Envelope xmlns:s11="http://schemas.xmlsoap.org/soap/envelope/">
+                  
+                <s11:Body>
+                        
+                    <ns1:NumberToWords xmlns:ns1="http://www.dataaccess.com/webservicesserver/">
+                              
+                        <ns1:ubiNum>{ubiNum}</ns1:ubiNum>
+                            
+                    </ns1:NumberToWords>
+                      
+                </s11:Body>
+            </s11:Envelope>
+        </Payload>
+                
+        <Verb>POST</Verb>
+            
+    </Set>
+        
+    <AssignVariable>
+                
+        <Name>forward.target.url</Name>
+                
+        <Value>https://www.dataaccess.com/webservicesserver/numberconversion.wso</Value>
+            
+    </AssignVariable>
+        
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+        
+    <AssignTo createNew="false" transport="http" type="request"/>
+    
+</AssignMessage>

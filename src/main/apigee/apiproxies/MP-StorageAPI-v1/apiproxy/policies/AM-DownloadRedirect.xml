@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage name="AM-DownloadRedirect">
+    <Set>
+        <StatusCode>302</StatusCode>
+        <Headers>
+            <Header name="Location">{url}</Header>
+        </Headers>
+    </Set>
+    <DisplayName>AM-DownloadRedirect</DisplayName>
+</AssignMessage>

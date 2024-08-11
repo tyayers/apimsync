@@ -1,0 +1,16 @@
+<APIProxy revision="1" name="SolarAgent">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1704964831915</CreatedAt>
+    <LastModifiedAt>1704964831915</LastModifiedAt>
+    <BasePaths>/solar</BasePaths>
+    <Policies>
+        <Policy>SIR-set-integration-request</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <IntegrationEndpoints>
+        <IntegrationEndpoint>default</IntegrationEndpoint>
+    </IntegrationEndpoints>
+</APIProxy>

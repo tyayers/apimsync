@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<SetIntegrationRequest continueOnError="false" enabled="true" name="SIR-set-integration-request">
+  <DisplayName>SIR-Set Integration Request</DisplayName>
+  <ProjectId ref="organization.name"/>
+  <IntegrationName>MP-Users</IntegrationName>
+  <IntegrationRegion ref="system.region.name"/>
+  <ApiTrigger>api_trigger/GetUser_API1</ApiTrigger>
+  <Parameters>
+    <Parameter name="userRequest" type="json" ref="request.content"/>
+  </Parameters>
+</SetIntegrationRequest>

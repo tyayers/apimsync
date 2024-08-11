@@ -1,0 +1,21 @@
+<APIProxy revision="1" name="STOXX-Indexes-v1">
+    <DisplayName></DisplayName>
+    <Description></Description>
+    <CreatedAt>1708938901502</CreatedAt>
+    <LastModifiedAt>1708938901502</LastModifiedAt>
+    <BasePaths>/v1/stoxx-indexes</BasePaths>
+    <Policies>
+        <Policy>ConvertResponse</Policy>
+        <Policy>SetQuery</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://ConvertResponse.js</Resource>
+        <Resource>jsc://SetQuery.js</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

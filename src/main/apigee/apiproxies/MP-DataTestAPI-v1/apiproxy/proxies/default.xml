@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+  <FaultRules>
+  </FaultRules>
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>EV-ExtractName</Name>
+      </Step>
+      <Step>
+        <Name>KVM-GetVariables</Name>
+      </Step>
+    </Request>
+    <Response>
+    </Response>
+  </PreFlow>
+  <Flows>
+  </Flows>
+  <PostFlow name="PostFlow">
+    <Request>
+    </Request>
+    <Response>
+    </Response>
+  </PostFlow>
+  <PostClientFlow name="PostClientFlow">
+    <Response>
+    </Response>
+  </PostClientFlow>
+  <HTTPProxyConnection>
+    <BasePath>/v1/test/data</BasePath>
+  </HTTPProxyConnection>
+  <RouteRule name="default">
+    <TargetEndpoint>default</TargetEndpoint>
+  </RouteRule>
+</ProxyEndpoint>

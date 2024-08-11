@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RaiseFault async="false" continueOnError="false" enabled="true" name="return-open-api">
+        
+    <DisplayName>Return Open API</DisplayName>
+        
+    <Properties/>
+        
+    <FaultResponse>
+                
+        <Set>
+                    	
+            <StatusCode>200</StatusCode>
+                        
+            <Headers>
+                            	
+                <Header name="Content-Type">application/json</Header>
+                            
+            </Headers>
+                        
+            <Payload contentType="application/json" variablePrefix="@" variableSuffix="#">{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "NumberConversion",
+    "description": "An OAS document generated from WSDL",
+    "termsOfService": "",
+    "contact": {
+      "name": "API Team"
+    },
+    "license": {
+      "name": "Apache 2.0"
+    }
+  },
+  "host": "@request.header.host#",
+  "basePath": "/numberconversion",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/numbertowords": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "$ref": "#/definitions/NumberToWordsResponse"
+            }
+          }
+        },
+        "description": "Implements WSDL operation NumberToWords",
+        "parameters": []
+      }
+    },
+    "/numbertodollars": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "$ref": "#/definitions/NumberToDollarsResponse"
+            }
+          }
+        },
+        "description": "Implements WSDL operation NumberToDollars",
+        "parameters": [
+          {
+            "name": "NumberToWordsResult",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "dNum",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "NumberToWords": {
+      "properties": {},
+      "type": "object"
+    },
+    "NumberToWordsResponse": {
+      "properties": {
+        "NumberToWordsResult": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "NumberToDollars": {
+      "properties": {
+        "dNum": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "NumberToDollarsResponse": {
+      "properties": {
+        "NumberToDollarsResult": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  }
+}</Payload>
+                    
+        </Set>
+            
+    </FaultResponse>
+    
+</RaiseFault>

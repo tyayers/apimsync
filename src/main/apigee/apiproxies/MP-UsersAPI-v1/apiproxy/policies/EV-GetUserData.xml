@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ExtractVariables continueOnError="false" enabled="true" name="EV-GetUserData">
+  <DisplayName>EV-GetUserData</DisplayName>
+  <Properties/>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <JSONPayload>
+    <Variable name="userData">
+      <JSONPath>$.outputParameters.userData</JSONPath>
+    </Variable>
+    <Variable name="developerData">
+      <JSONPath>$.outputParameters.developerData</JSONPath>
+    </Variable>
+  </JSONPayload>
+  <Source clearPayload="false">response</Source>
+  <VariablePrefix>result</VariablePrefix>
+</ExtractVariables>

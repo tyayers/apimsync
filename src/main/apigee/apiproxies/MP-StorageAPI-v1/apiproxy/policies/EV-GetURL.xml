@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ExtractVariables continueOnError="false" enabled="true" name="EV-GetURL">
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <JSONPayload>
+        <Variable name="url">
+            <JSONPath>$.data</JSONPath>
+        </Variable>
+    </JSONPayload>
+    <Source clearPayload="false">calloutResponse.content</Source>
+    <DisplayName>EV-GetURL</DisplayName>
+</ExtractVariables>
