@@ -1,4 +1,0 @@
-<VerifyAPIKey async="false" continueOnError="false" enabled="true" name="verify-api-key">
-    <DisplayName>Verify API Key</DisplayName>
-    <APIKey ref="request.queryparam.apikey"/>
-</VerifyAPIKey>

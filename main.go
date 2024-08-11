@@ -43,19 +43,19 @@ func main() {
 			fmt.Println(string(apisOutput))
 
 			if apis.Proxies != nil {
-				os.MkdirAll("src/main/apigee/apiproxies", 0755)
+				os.MkdirAll("data/src/main/apigee/apiproxies", 0755)
 				for _, api := range apis.Proxies {
 					fmt.Println(api.Name)
 					bundle := getApigeeApiBundle("apigee-test38", api.Name, api.Revision[len(api.Revision)-1], token.AccessToken)
 
 					if bundle != nil {
-						err = os.WriteFile("src/main/apigee/apiproxies/"+api.Name+".zip", bundle, 0644)
+						err = os.WriteFile("data/src/main/apigee/apiproxies/"+api.Name+".zip", bundle, 0644)
 						if err != nil {
 							panic(err)
 						}
 
 						// extract zip file
-						unzipBundle("src/main/apigee/apiproxies", api.Name)
+						unzipBundle("data/src/main/apigee/apiproxies", api.Name)
 					}
 				}
 			}

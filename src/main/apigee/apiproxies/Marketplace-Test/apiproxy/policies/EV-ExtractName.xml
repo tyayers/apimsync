@@ -1,6 +1,0 @@
-<ExtractVariables name="EV-ExtractName" enabled="true">
-  <DisplayName>EV-ExtractName</DisplayName>
-  <URIPath>
-    <Pattern>/{entityName}</Pattern>
-  </URIPath>
-</ExtractVariables>

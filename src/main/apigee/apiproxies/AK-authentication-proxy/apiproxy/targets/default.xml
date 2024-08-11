@@ -1,5 +1,0 @@
-<TargetEndpoint name="default">
-  <HTTPTargetConnection>
-    <URL>https://httpbin.org</URL>
-  </HTTPTargetConnection>
-</TargetEndpoint>
