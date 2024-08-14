@@ -30,10 +30,44 @@ type ApigeeApi struct {
 	ApiProxyType string   `json:"apiProxyType"`
 }
 
+type ApigeeEnvironment struct {
+	Proxies     []ApigeeEnvironmentProxy `json:"proxies"`
+	SharedFlows []ApigeeEnvironmentProxy `json:"sharedflows"`
+}
+
+type ApigeeEnvironmentProxy struct {
+	Name string `json:"name"`
+}
+
+type ApigeeDeveloper struct {
+	Email     string `json:"email"`
+	UserName  string `json:"userName"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+type ApigeeDeveloperApp struct {
+	DeveloperEmail string   `json:"developerEmail"`
+	Name           string   `json:"name"`
+	DisplayName    string   `json:"displayName"`
+	ApiProducts    []string `json:"apiProducts"`
+	ExpiryType     string   `json:"expiryType"`
+}
+
+type ApigeeProduct struct {
+	Name         string   `json:"name"`
+	DisplayName  string   `json:"displayName"`
+	Scopes       []string `json:"scopes"`
+	Environments []string `json:"environments"`
+	ApiResources []string `json:"apiResources"`
+	Proxies      []string `json:"proxies"`
+}
+
 type ApigeeFlags struct {
-	Project string `name:"project" description:"The Google Cloud project that Apigee is running in."`
-	Token   string `name:"token" description:"The Google access token to call Apigee with."`
-	ApiName string `name:"api" description:"A specific Apigee API."`
+	Project     string `name:"project" description:"The Google Cloud project that Apigee is running in."`
+	Token       string `name:"token" description:"The Google access token to call Apigee with."`
+	ApiName     string `name:"api" description:"A specific Apigee API."`
+	Environment string `name:"environment" description:"A specific Apigee environment."`
 }
 
 func main() {
@@ -44,6 +78,9 @@ func main() {
 	apigeeCommand.NewSubCommandFunction("export", "Exports Apigee APIs from a given project.", apigeeExport)
 	apigeeCommand.NewSubCommandFunction("import", "Imports APIs to an Apigee project.", apigeeImport)
 	apigeeCommand.NewSubCommandFunction("clean", "Removes all of the Apigee APIs from a given project.", apigeeClean)
+	apigeeTestCommand := apigeeCommand.NewSubCommand("test", "Local test commands.")
+	apigeeTestCommand.NewSubCommandFunction("init", "Initializes local test data for an environment.", initApigeeTest)
+
 	err := cli.Run()
 
 	if err != nil {
@@ -60,6 +97,22 @@ func apigeeExport(flags *ApigeeFlags) error {
 
 	fmt.Println("Exporting Apigee APIs for project " + flags.Project + "...")
 	var baseDir = "data/" + flags.Project + "/src/main/apigee/apiproxies"
+	var environment ApigeeEnvironment
+	if flags.Environment != "" {
+		// Create dir if it does not exist
+		os.MkdirAll("data/"+flags.Project+"/src/main/apigee/environments/"+flags.Environment, 0755)
+
+		// Open deployments.json file
+		deploymentsFile, err := os.Open("data/" + flags.Project + "/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
+		if err != nil {
+			environment = ApigeeEnvironment{Proxies: []ApigeeEnvironmentProxy{}, SharedFlows: []ApigeeEnvironmentProxy{}}
+		} else {
+			byteValue, _ := io.ReadAll(deploymentsFile)
+			json.Unmarshal(byteValue, &environment)
+		}
+		defer deploymentsFile.Close()
+	}
+
 	if flags.Token == "" {
 		var token *oauth2.Token
 		scopes := []string{
@@ -102,8 +155,27 @@ func apigeeExport(flags *ApigeeFlags) error {
 					if err != nil {
 						panic(err)
 					}
+
+					// add to deployments.json if not already there
+					foundProxy := false
+					for _, value := range environment.Proxies {
+						if value.Name == api.Name {
+							foundProxy = true
+
+						}
+					}
+					if !foundProxy {
+						// add to deployments.json
+						environment.Proxies = append(environment.Proxies, ApigeeEnvironmentProxy{Name: api.Name})
+					}
 				}
 			}
+		}
+
+		if flags.Environment != "" {
+			// write deployments.json
+			bytes, _ := json.MarshalIndent(environment, "", " ")
+			os.WriteFile("data/"+flags.Project+"/src/main/apigee/environments/"+flags.Environment+"/deployments.json", bytes, 0644)
 		}
 	}
 
@@ -342,7 +414,6 @@ func createApigeeApi(org string, token string, name string) error {
 	writer.Close()
 
 	r, _ := http.NewRequest(http.MethodPost, "https://apigee.googleapis.com/v1/organizations/"+org+"/apis?name="+name+"&action=import", body)
-	//r, _ := http.NewRequest(http.MethodPost, "https://testty.free.beeceptor.com", body)
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	r.Header.Add("Authorization", "Bearer "+token)
 	client := &http.Client{}
@@ -353,4 +424,60 @@ func createApigeeApi(org string, token string, name string) error {
 	}
 
 	return err
+}
+
+func initApigeeTest(flags *ApigeeFlags) error {
+	if flags.Project == "" {
+		fmt.Println("No project given, cannot init test data.")
+		return nil
+	}
+
+	if flags.Environment == "" {
+		fmt.Println("No environment given, cannot init test data.")
+		return nil
+	}
+
+	// create test developer
+	developer := ApigeeDeveloper{Email: "test@example.com", UserName: "testUser", FirstName: "Test", LastName: "User"}
+	developers := []ApigeeDeveloper{developer}
+
+	// create test product
+	product := ApigeeProduct{Name: "test_product", DisplayName: "Test Product", Scopes: []string{}, Environments: []string{}, ApiResources: []string{"/"}, Proxies: []string{}}
+	products := []ApigeeProduct{product}
+
+	// create test developerapp
+	app := ApigeeDeveloperApp{DeveloperEmail: developer.Email, Name: "test_app", DisplayName: "Test App", ApiProducts: []string{"test_product"}, ExpiryType: "never"}
+	apps := []ApigeeDeveloperApp{app}
+
+	// load environment deployments.json
+	var environment ApigeeEnvironment
+	deploymentsFile, err := os.Open("data/" + flags.Project + "/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
+	if err != nil {
+		environment = ApigeeEnvironment{Proxies: []ApigeeEnvironmentProxy{}, SharedFlows: []ApigeeEnvironmentProxy{}}
+	} else {
+		byteValue, _ := io.ReadAll(deploymentsFile)
+		json.Unmarshal(byteValue, &environment)
+	}
+	defer deploymentsFile.Close()
+
+	// create test directory
+	os.MkdirAll("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment, 0755)
+
+	// write developers
+	bytes, _ := json.MarshalIndent(developers, "", " ")
+	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/developers.json", bytes, 0644)
+
+	for _, proxy := range environment.Proxies {
+		products[0].Proxies = append(products[0].Proxies, proxy.Name)
+	}
+
+	// write products
+	bytes, _ = json.MarshalIndent(products, "", " ")
+	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/products.json", bytes, 0644)
+
+	// write apps
+	bytes, _ = json.MarshalIndent(apps, "", " ")
+	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/developerapps.json", bytes, 0644)
+
+	return nil
 }
