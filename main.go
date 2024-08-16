@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/leaanthony/clir"
+	"github.com/tidwall/gjson"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -63,11 +64,78 @@ type ApigeeProduct struct {
 	Proxies      []string `json:"proxies"`
 }
 
+type AzureApis struct {
+	Value []AzureApi `json:"value"`
+}
+
+type AzureApi struct {
+	Id         string             `json:"id"`
+	Type_      string             `json:"type"`
+	Name       string             `json:"name"`
+	Properties AzureApiProperties `json:"properties"`
+}
+
+type AzureApiProperties struct {
+	DisplayName                   string                                `json:"displayName"`
+	ApiRevision                   string                                `json:"apiRevision"`
+	Description                   string                                `json:"description"`
+	SubscriptionRequired          string                                `json:"subscriptionRequired"`
+	ServiceUrl                    string                                `json:"serviceUrl"`
+	BackendId                     string                                `json:"backendId"`
+	Path                          string                                `json:"path"`
+	Protocols                     []string                              `json:"protocols"`
+	AuthenticationSettings        AzureApiAuthenticationSettings        `json:"authenticationSettings"`
+	SubscriptionKeyParameterNames AzureApiSubscriptionKeyParameterNames `json:"subscriptionKeyParameterNames"`
+	IsCurrent                     bool                                  `json:"isCurrent"`
+}
+
+type AzureApiAuthenticationSettings struct {
+	OAuth2                       string   `json:"oAuth2"`
+	OpenId                       string   `json:"openId"`
+	OAuth2AuthenticationSettings []string `json:"oAuth2AuthenticationSettings"`
+	OpenIdAuthenticationSettings []string `json:"openIdAuthenticationSettings"`
+}
+
+type AzureApiSubscriptionKeyParameterNames struct {
+	Header string `json:"header"`
+	Query  string `json:"query"`
+}
+
+type AzureApiSchema struct {
+	Id         string                   `json:"id"`
+	Type       string                   `json:"type"`
+	Name       string                   `json:"name"`
+	Properties AzureApiSchemaProperties `json:"properties"`
+}
+
+type AzureApiSchemaProperties struct {
+	Description string `json:"description"`
+	SchemaType  string `json:"schemaType"`
+	Document    string `json:"document"`
+}
+
+type AzureTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    string `json:"expires_in"`
+	ExpiresOn    string `json:"expires_on"`
+	ExtExpiresIn string `json:"ext_expires_in"`
+	NotBefore    string `json:"not_before"`
+	Resource     string `json:"resource"`
+	TokenType    string `json:"token_type"`
+}
+
 type ApigeeFlags struct {
 	Project     string `name:"project" description:"The Google Cloud project that Apigee is running in."`
 	Token       string `name:"token" description:"The Google access token to call Apigee with."`
 	ApiName     string `name:"api" description:"A specific Apigee API."`
 	Environment string `name:"environment" description:"A specific Apigee environment."`
+}
+
+type AzureFlags struct {
+	Subscription  string `name:"subscription" description:"The Azure subscription ID."`
+	ResourceGroup string `name:"resourcegroup" description:"The Azure resource group."`
+	ServiceName   string `name:"name" description:"The Azure API Management service name."`
+	Token         string `name:"token" description:"The Azure access token to call Azure with."`
 }
 
 func main() {
@@ -80,6 +148,9 @@ func main() {
 	apigeeCommand.NewSubCommandFunction("clean", "Removes all of the Apigee APIs from a given project.", apigeeClean)
 	apigeeTestCommand := apigeeCommand.NewSubCommand("test", "Local test commands.")
 	apigeeTestCommand.NewSubCommandFunction("init", "Initializes local test data for an environment.", initApigeeTest)
+
+	azureCommand := cli.NewSubCommand("azure", "Functions for Azure API Management APIs.")
+	azureCommand.NewSubCommandFunction("export", "Exports Apigee APIs from a given project.", azureExport)
 
 	err := cli.Run()
 
@@ -96,14 +167,14 @@ func apigeeExport(flags *ApigeeFlags) error {
 	}
 
 	fmt.Println("Exporting Apigee APIs for project " + flags.Project + "...")
-	var baseDir = "data/" + flags.Project + "/src/main/apigee/apiproxies"
+	var baseDir = "data/src/main/apigee/apiproxies"
 	var environment ApigeeEnvironment
 	if flags.Environment != "" {
 		// Create dir if it does not exist
-		os.MkdirAll("data/"+flags.Project+"/src/main/apigee/environments/"+flags.Environment, 0755)
+		os.MkdirAll("data/src/main/apigee/environments/"+flags.Environment, 0755)
 
 		// Open deployments.json file
-		deploymentsFile, err := os.Open("data/" + flags.Project + "/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
+		deploymentsFile, err := os.Open("data/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
 		if err != nil {
 			environment = ApigeeEnvironment{Proxies: []ApigeeEnvironmentProxy{}, SharedFlows: []ApigeeEnvironmentProxy{}}
 		} else {
@@ -175,7 +246,7 @@ func apigeeExport(flags *ApigeeFlags) error {
 		if flags.Environment != "" {
 			// write deployments.json
 			bytes, _ := json.MarshalIndent(environment, "", " ")
-			os.WriteFile("data/"+flags.Project+"/src/main/apigee/environments/"+flags.Environment+"/deployments.json", bytes, 0644)
+			os.WriteFile("data/src/main/apigee/environments/"+flags.Environment+"/deployments.json", bytes, 0644)
 		}
 	}
 
@@ -451,7 +522,7 @@ func initApigeeTest(flags *ApigeeFlags) error {
 
 	// load environment deployments.json
 	var environment ApigeeEnvironment
-	deploymentsFile, err := os.Open("data/" + flags.Project + "/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
+	deploymentsFile, err := os.Open("data/src/main/apigee/environments/" + flags.Environment + "/deployments.json")
 	if err != nil {
 		environment = ApigeeEnvironment{Proxies: []ApigeeEnvironmentProxy{}, SharedFlows: []ApigeeEnvironmentProxy{}}
 	} else {
@@ -461,11 +532,11 @@ func initApigeeTest(flags *ApigeeFlags) error {
 	defer deploymentsFile.Close()
 
 	// create test directory
-	os.MkdirAll("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment, 0755)
+	os.MkdirAll("data/src/main/apigee/tests/"+flags.Environment, 0755)
 
 	// write developers
 	bytes, _ := json.MarshalIndent(developers, "", " ")
-	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/developers.json", bytes, 0644)
+	os.WriteFile("data/src/main/apigee/tests/"+flags.Environment+"/developers.json", bytes, 0644)
 
 	for _, proxy := range environment.Proxies {
 		products[0].Proxies = append(products[0].Proxies, proxy.Name)
@@ -473,11 +544,140 @@ func initApigeeTest(flags *ApigeeFlags) error {
 
 	// write products
 	bytes, _ = json.MarshalIndent(products, "", " ")
-	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/products.json", bytes, 0644)
+	os.WriteFile("data/src/main/apigee/tests/"+flags.Environment+"/products.json", bytes, 0644)
 
 	// write apps
 	bytes, _ = json.MarshalIndent(apps, "", " ")
-	os.WriteFile("data/"+flags.Project+"/src/main/apigee/tests/"+flags.Environment+"/developerapps.json", bytes, 0644)
+	os.WriteFile("data/src/main/apigee/tests/"+flags.Environment+"/developerapps.json", bytes, 0644)
 
 	return nil
+}
+
+func azureExport(flags *AzureFlags) error {
+	var baseDir = "data/src/main/azure/apiproxies"
+	var token string = flags.Token
+	if flags.Subscription == "" {
+		fmt.Println("No subscription given, cannot export Azure APIs.")
+		return nil
+	} else if flags.ResourceGroup == "" {
+		fmt.Println("No resource group given, cannot export Azure APIs.")
+		return nil
+	} else if flags.ServiceName == "" {
+		fmt.Println("No service name given, cannot export Azure APIs.")
+		return nil
+	}
+
+	if token == "" {
+		// fetch an Azure token using a client id and secret
+		var env_token string = os.Getenv("AZURE_TOKEN")
+		if env_token != "" {
+			token = env_token
+		} else {
+			var client_id string = os.Getenv("AZURE_CLIENT_ID")
+			var client_secret string = os.Getenv("AZURE_CLIENT_SECRET")
+			var tenant_id string = os.Getenv("AZURE_TENANT_ID")
+
+			if client_id == "" || client_secret == "" || tenant_id == "" {
+				fmt.Println("No token sent and no client environment variables set, cannot export Azure APIs.")
+				return nil
+			}
+
+			token = getAzureToken(client_id, client_secret, tenant_id)
+		}
+
+		if token == "" {
+			fmt.Println("Could not get valid Azure token, cannot export Azure APIs.")
+			return nil
+		}
+	}
+
+	fmt.Println("Exporting Azure APIs for service " + flags.ServiceName + "...")
+	apis := getAzureApis(flags.Subscription, flags.ResourceGroup, flags.ServiceName, token)
+	if len(apis.Value) > 0 {
+		for _, api := range apis.Value {
+			if !strings.Contains(api.Name, ";rev=") {
+				fmt.Println("Exporting " + api.Name + "...")
+				bytes, _ := json.MarshalIndent(api, "", " ")
+				os.MkdirAll(baseDir+"/"+api.Name, 0755)
+				os.WriteFile(baseDir+"/"+api.Name+"/"+api.Name+".json", bytes, 0644)
+
+				schema := getAzureApiSchema(flags.Subscription, flags.ResourceGroup, flags.ServiceName, api.Name, token)
+
+				if schema.Id != "" {
+					bytes, _ := json.MarshalIndent(schema, "", " ")
+					os.WriteFile(baseDir+"/"+api.Name+"/schema_definition.json", bytes, 0644)
+
+					doc_bytes := []byte(schema.Properties.Document)
+					os.WriteFile(baseDir+"/"+api.Name+"/schema."+schema.Properties.SchemaType, doc_bytes, 0644)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func getAzureToken(clientId string, clientSecret string, tenantId string) string {
+	var result string = ""
+	var body string = "grant_type=client_credentials&client_id=" + clientId + "&client_secret=" + clientSecret + "&resource=https%3A%2F%2Fmanagement.azure.com%2F"
+	bodyBuffer := bytes.NewBufferString(body)
+	req, _ := http.NewRequest(http.MethodPost, "https://login.microsoftonline.com/"+tenantId+"/oauth2/token", bodyBuffer)
+	response, err := http.DefaultClient.Do(req)
+
+	//Handle Error
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+	}
+	defer response.Body.Close()
+	//Read the response body
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	var azureToken AzureTokenResponse
+	json.Unmarshal(responseBody, &azureToken)
+
+	if azureToken.AccessToken != "" {
+		result = azureToken.AccessToken
+	}
+
+	return result
+}
+
+func getAzureApis(subscriptionId string, resourceGroup string, serviceName string, token string) AzureApis {
+	var apis AzureApis
+	req, _ := http.NewRequest(http.MethodGet, "https://management.azure.com/subscriptions/"+subscriptionId+"/resourceGroups/"+resourceGroup+"/providers/Microsoft.ApiManagement/service/"+serviceName+"/apis?api-version=2022-08-01", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err == nil {
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			json.Unmarshal(body, &apis)
+			//fmt.Println(string(body))
+		}
+	}
+
+	return apis
+}
+
+func getAzureApiSchema(subscriptionId string, resourceGroup string, serviceName string, apiName string, token string) AzureApiSchema {
+	var schema AzureApiSchema
+	req, _ := http.NewRequest(http.MethodGet, "https://management.azure.com/subscriptions/"+subscriptionId+"/resourceGroups/"+resourceGroup+"/providers/Microsoft.ApiManagement/service/"+serviceName+"/schemas/"+apiName+"?api-version=2022-08-01", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err == nil {
+		if resp.StatusCode == 200 {
+			body, err := io.ReadAll(resp.Body)
+			if err == nil {
+				document := gjson.Get(string(body), "properties.document").String()
+				json.Unmarshal(body, &schema)
+				schema.Properties.Document = document
+				//fmt.Println(string(body))
+			}
+		}
+	}
+
+	return schema
 }
