@@ -21,9 +21,17 @@ type GeneralApi struct {
 	PlatformResourceUri string `json:"platformResourceUri"`
 }
 
+type PlatformStatus struct {
+	Connected bool   `json:"connected"`
+	Message   string `json:"message"`
+}
+
 func main() {
 	// Create new cli
 	cli := clir.NewCli("apimsync", "A syncing tool between API platforms", "v0.0.1")
+
+	webServerCommand := cli.NewSubCommand("ws", "Functions for the web server.")
+	webServerCommand.NewSubCommandFunction("start", "Start a web server to listen for commands.", webServerStart)
 
 	apigeeCommand := cli.NewSubCommand("apigee", "Functions for Apigee.")
 	apigeeApisCommand := apigeeCommand.NewSubCommand("apis", "Functions for Apigee API resources.")

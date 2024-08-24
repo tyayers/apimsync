@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -93,6 +94,61 @@ type HubApiVersionSpec struct {
 type HubContents struct {
 	MimeType string `json:"mimeType"`
 	Contents string `json:"contents"`
+}
+
+func apiHubStatus(flags *ApigeeFlags) PlatformStatus {
+	var status PlatformStatus
+	if flags.Project == "" {
+		status.Connected = false
+		status.Message = "No project given, cannot connect to API Hub."
+		return status
+	} else if flags.Region == "" {
+		status.Connected = false
+		status.Message = "No region given, cannot connect to API Hub."
+		return status
+	}
+
+	if flags.Token == "" {
+		var token *oauth2.Token
+		scopes := []string{
+			"https://www.googleapis.com/auth/cloud-platform",
+		}
+
+		ctx := context.Background()
+		credentials, err := google.FindDefaultCredentials(ctx, scopes...)
+
+		if err == nil {
+			token, err = credentials.TokenSource.Token()
+
+			if err == nil {
+				flags.Token = token.AccessToken
+			}
+		}
+	}
+	req, _ := http.NewRequest(http.MethodGet, "https://apihub.googleapis.com/v1/projects/"+flags.Project+"/locations/"+flags.Region+"/apis", nil)
+	req.Header.Add("Authorization", "Bearer "+flags.Token)
+
+	var apis HubApis
+	resp, err := http.DefaultClient.Do(req)
+	if err == nil {
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			json.Unmarshal(body, &apis)
+		}
+
+		if resp.StatusCode == 200 {
+			status.Connected = true
+			status.Message = "Connected to API Hub, " + strconv.Itoa(len(apis.Apis)) + " APIs found in project " + flags.Project + " and region " + flags.Region + "."
+		} else {
+			status.Connected = false
+			status.Message = resp.Status
+		}
+	} else {
+		status.Connected = false
+		status.Message = err.Error()
+	}
+
+	return status
 }
 
 func apiHubOnramp(flags *ApigeeFlags) error {
