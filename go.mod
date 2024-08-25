@@ -1,4 +1,4 @@
-module tyayers/apigee-sync
+module tyayers/apimsync
 
 go 1.22.6
 
