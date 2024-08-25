@@ -357,7 +357,6 @@ func apiHubImport(flags *ApigeeFlags) error {
 					json.Unmarshal(byteValue, &apiDeployment)
 					requestBody := bytes.NewBuffer(byteValue)
 					deploymentUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/deployments?deploymentId=" + e.Name()
-					fmt.Println(deploymentUrl)
 					r, _ := http.NewRequest(http.MethodPost, deploymentUrl, requestBody)
 					r.Header.Add("Content-Type", "application/json")
 					r.Header.Add("Authorization", "Bearer "+flags.Token)

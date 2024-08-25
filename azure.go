@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -105,6 +106,76 @@ type AzureFlags struct {
 	ServiceName   string `name:"name" description:"The Azure API Management service name."`
 	Token         string `name:"token" description:"The Azure access token to call Azure with."`
 	ApiName       string `name:"api" description:"A specific Azure API Management API."`
+}
+
+func azureStatus(flags *AzureFlags) PlatformStatus {
+	var status PlatformStatus
+	var token string = flags.Token
+	if flags.Subscription == "" {
+		status.Connected = false
+		status.Message = "No subscription given, cannot connect to Azure API Management."
+		return status
+	} else if flags.ResourceGroup == "" {
+		status.Connected = false
+		status.Message = "No resource group given, cannot connect to Azure API Management."
+		return status
+	} else if flags.ServiceName == "" {
+		status.Connected = false
+		status.Message = "No service name given, cannot connect to Azure API Management."
+		return status
+	}
+
+	if token == "" {
+		// fetch an Azure token using a client id and secret
+		var env_token string = os.Getenv("AZURE_TOKEN")
+		if env_token != "" {
+			token = env_token
+		} else {
+			var client_id string = os.Getenv("AZURE_CLIENT_ID")
+			var client_secret string = os.Getenv("AZURE_CLIENT_SECRET")
+			var tenant_id string = os.Getenv("AZURE_TENANT_ID")
+
+			if client_id == "" || client_secret == "" || tenant_id == "" {
+				status.Connected = false
+				status.Message = "No client id, secret or tenant id give, cannot get Azure token."
+				return status
+			}
+
+			token = getAzureToken(client_id, client_secret, tenant_id)
+		}
+
+		if token == "" {
+			status.Connected = false
+			status.Message = "Could not get Azure token."
+			return status
+		}
+	}
+
+	var apis AzureApis
+	req, _ := http.NewRequest(http.MethodGet, "https://management.azure.com/subscriptions/"+flags.Subscription+"/resourceGroups/"+flags.ResourceGroup+"/providers/Microsoft.ApiManagement/service/"+flags.ServiceName+"/apis?api-version=2022-08-01", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err == nil {
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			json.Unmarshal(body, &apis)
+			//fmt.Println(string(body))
+		}
+
+		if resp.StatusCode == 200 {
+			status.Connected = true
+			status.Message = "Connected to Azure, " + strconv.Itoa(len(apis.Value)) + " APIs found in service " + flags.ServiceName + "."
+		} else {
+			status.Connected = false
+			status.Message = resp.Status
+		}
+	} else {
+		status.Connected = false
+		status.Message = err.Error()
+	}
+
+	return status
 }
 
 func azureServiceExport(flags *AzureFlags) error {

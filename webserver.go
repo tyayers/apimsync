@@ -18,13 +18,6 @@ type WebServerFlags struct {
 	Port int `name:"port" description:"The port to listen on." help:"The port to listen on." default:"8080"`
 }
 
-// GreetingOutput represents the greeting operation response.
-type GreetingOutput struct {
-	Body struct {
-		Message string `json:"message" example:"Hello, world!" doc:"Greeting message"`
-	}
-}
-
 type ApimStatus struct {
 	Body struct {
 		ApigeeStatus PlatformStatus `json:"apigee"`
@@ -42,7 +35,8 @@ type ApimSyncInput struct {
 
 type ApimSyncOutput struct {
 	Body struct {
-		Result string `json:"result" example:"Sync successful!" doc:"The result of the sync operation."`
+		Result  bool   `json:"result" example:"true" doc:"The result of the sync operation."`
+		Message string `json:"message" example:"Sync successful!" doc:"The result of the sync operation."`
 	}
 }
 
@@ -71,8 +65,10 @@ func webServerStart(flags *WebServerFlags) error {
 func apimStatus(ctx context.Context, input *struct{}) (*ApimStatus, error) {
 	var status ApimStatus
 	apigeeFlags := ApigeeFlags{Project: os.Getenv("APIGEE_PROJECT"), Region: os.Getenv("APIGEE_REGION")}
+	azureFlags := AzureFlags{Subscription: os.Getenv("AZURE_SUBSCRIPTION_ID"), ResourceGroup: os.Getenv("AZURE_RESOURCE_GROUP"), ServiceName: os.Getenv("AZURE_SERVICE_NAME")}
 	status.Body.ApigeeStatus = apigeeStatus(&apigeeFlags)
 	status.Body.ApiHubStatus = apiHubStatus(&apigeeFlags)
+	status.Body.AzureStatus = azureStatus(&azureFlags)
 
 	return &status, nil
 }
@@ -80,14 +76,20 @@ func apimStatus(ctx context.Context, input *struct{}) (*ApimStatus, error) {
 func apimSync(ctx context.Context, input *ApimSyncInput) (*ApimSyncOutput, error) {
 	var result ApimSyncOutput
 
-	subId := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	fmt.Println(subId)
+	apigeeFlags := ApigeeFlags{Project: os.Getenv("APIGEE_PROJECT"), Region: os.Getenv("APIGEE_REGION")}
+	azureFlags := AzureFlags{Subscription: os.Getenv("AZURE_SUBSCRIPTION_ID"), ResourceGroup: os.Getenv("AZURE_RESOURCE_GROUP"), ServiceName: os.Getenv("AZURE_SERVICE_NAME")}
 
-	if input != nil {
-		fmt.Println(input.Body.Offramp)
-		fmt.Println(input.Body.Onramp)
+	if input.Body.Offramp == "azure" {
+		azureExport(&azureFlags)
+		azureOfframp(&azureFlags)
 	}
 
-	result.Body.Result = "Sync not started"
+	if input.Body.Onramp == "apihub" {
+		apiHubOnramp(&apigeeFlags)
+		apiHubImport(&apigeeFlags)
+	}
+
+	result.Body.Result = true
+	result.Body.Message = "Sync from " + input.Body.Offramp + " to " + input.Body.Onramp + " successful!"
 	return &result, nil
 }
