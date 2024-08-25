@@ -10,16 +10,16 @@ These four commands export all APIs from an Azure APIM service, then offramp the
 source .env
 
 # 1. azure export all apis from an Azure APIM service to the local filesystem (./data directory will be created)
-apimsync azure apis export --subscription $SUBSCRIPTION_ID --resourcegroup $RESOURCE_GROUP --name $SERVICE_NAME
+apimsync azure apis export --subscription $AZURE_SUBSCRIPTION_ID --resourcegroup $AZURE_RESOURCE_GROUP --name $AZURE_SERVICE_NAME
 
 # 2. azure apis offramp exported APIs to a generic format that can be onramped to API Hub (./data directory will be created)
-apimsync azure apis offramp  --subscription $SUBSCRIPTION_ID --resourcegroup $RESOURCE_GROUP --name $SERVICE_NAME
+apimsync azure apis offramp  --subscription $AZURE_SUBSCRIPTION_ID --resourcegroup $AZURE_RESOURCE_GROUP --name $AZURE_SERVICE_NAME
 
 # 3. apihub apis onramp from generic format to API Hub format (./data directory will be created)
-apimsync apihub apis onramp --project $PROJECT_ID --region $REGION
+apimsync apihub apis onramp --project $APIGEE_PROJECT_ID --region $APIGEE_REGION
 
 # 4. apihub apis import from onramped files to API Hub
-apimsync apihub apis import --project $PROJECT_ID --region $REGION
+apimsync apihub apis import --project $APIGEE_PROJECT_ID --region $APIGEE_REGION
 ```
 
 You can also start a web server to run commands.
