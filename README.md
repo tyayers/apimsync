@@ -3,7 +3,7 @@ A tool to help synchronize API assets between different API platforms. The tool 
 
 ## Example usage
 
-These four commands export all APIs from an Azure APIM service, then offramp them to a generic format, then onramp them to the API Hub format, and then finally import them to an API Hub instance in a Google Cloud project.
+These commands offramp APIs from an Azure APIM service, and then onramp them into Apigee API Hub.
 
 ```sh
 # source env variables
@@ -22,13 +22,23 @@ apimsync apihub apis onramp --project $APIGEE_PROJECT_ID --region $APIGEE_REGION
 apimsync apihub apis import --project $APIGEE_PROJECT_ID --region $APIGEE_REGION
 ```
 
-You can also start a web server to run commands.
+You can also start a web server to run the commands, for example deployed in Cloud Run and triggered through a Cloud Scheduler timer to keep the services in sync.
 
 ```sh
 # start web service
 apimsync ws start
 
-# open http://0:8080/docs to see API docs
+# open http://localhost:8080/docs to see API docs
+
+# call the v1/apim/sync API to do a complete sync from Azure to API Hub (equivalent of the four commands above)
+curl --request POST \
+  --url http://localhost:8080/v1/apim/sync \
+  --header 'Accept: application/json, application/problem+json' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "offramp": "azure",
+  "onramp": "apihub"
+}'
 ```
 The docs are available at http://0:8080/docs after starting the web server.
 
