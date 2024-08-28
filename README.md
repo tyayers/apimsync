@@ -50,6 +50,6 @@ You can either download a release binary, or build the project yourself.
 # build
 git clone https://github.com/tyayers/apimsync.git
 cd apimsync
-go build
-# run apimsync output command
+go build -o build
+# run apimsync from the build directory
 ```
