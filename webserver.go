@@ -28,8 +28,8 @@ type ApimStatus struct {
 
 type ApimSyncInput struct {
 	Body struct {
-		Offramp string `example:"azure"`
-		Onramp  string `example:"apihub"`
+		Offramp string `json:"offramp" enum:"azure" doc:"The APIM platform to offramp the APIs from."`
+		Onramp  string `json:"onramp" enum:"apihub" doc:"The APIM platform to onramp the APIs to."`
 	}
 }
 
