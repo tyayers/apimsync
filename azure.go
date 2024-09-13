@@ -92,14 +92,6 @@ type AzureTokenResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
-type ApigeeFlags struct {
-	Project     string `name:"project" description:"The Google Cloud project that Apigee is running in."`
-	Region      string `name:"region" description:"The Google Cloud region for a command."`
-	Token       string `name:"token" description:"The Google access token to call Apigee with."`
-	ApiName     string `name:"api" description:"A specific Apigee API."`
-	Environment string `name:"environment" description:"A specific Apigee environment."`
-}
-
 type AzureFlags struct {
 	Subscription  string `name:"subscription" description:"The Azure subscription ID."`
 	ResourceGroup string `name:"resourcegroup" description:"The Azure resource group."`

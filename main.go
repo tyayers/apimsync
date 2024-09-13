@@ -47,6 +47,11 @@ func main() {
 	azureApisCommand.NewSubCommandFunction("export", "Exports Azure API Management APIs.", azureExport)
 	azureApisCommand.NewSubCommandFunction("offramp", "Migrates Azure API Management APIs out to general.", azureOfframp)
 
+	awsCommand := cli.NewSubCommand("aws", "Functions for AWS API Gateway.")
+	awsApisCommand := awsCommand.NewSubCommand("apis", "Functions for AWS API Gateway API resources.")
+	awsApisCommand.NewSubCommandFunction("export", "Exports AWS API Gateway APIs.", awsExport)
+	awsApisCommand.NewSubCommandFunction("offramp", "Offramp AWS API Gateway APIs.", awsOfframp)
+
 	apiHubCommand := cli.NewSubCommand("apihub", "Functions for Apigee API Hub.")
 	apiHubApisCommand := apiHubCommand.NewSubCommand("apis", "Functions for API Hub API resources.")
 	apiHubApisCommand.NewSubCommandFunction("onramp", "Onramps APIs from general to API Hub.", apiHubOnramp)

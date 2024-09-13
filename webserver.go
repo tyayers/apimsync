@@ -23,6 +23,7 @@ type ApimStatus struct {
 		ApigeeStatus PlatformStatus `json:"apigee"`
 		ApiHubStatus PlatformStatus `json:"apihub"`
 		AzureStatus  PlatformStatus `json:"azure"`
+		AwsStatus    PlatformStatus `json:"aws"`
 	}
 }
 
@@ -69,6 +70,7 @@ func apimStatus(ctx context.Context, input *struct{}) (*ApimStatus, error) {
 	status.Body.ApigeeStatus = apigeeStatus(&apigeeFlags)
 	status.Body.ApiHubStatus = apiHubStatus(&apigeeFlags)
 	status.Body.AzureStatus = azureStatus(&azureFlags)
+	status.Body.AwsStatus = awsStatus(nil)
 
 	return &status, nil
 }

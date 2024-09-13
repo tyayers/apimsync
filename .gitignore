@@ -26,3 +26,4 @@ go.work.sum
 
 data
 build
+*.local*
