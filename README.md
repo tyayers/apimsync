@@ -44,7 +44,13 @@ The docs are available at http://0:8080/docs after starting the web server.
 
 ## Getting started
 
-You can either download a release binary, or build the project yourself.
+Install the binary `apimsync` to your `/usr/bin` directory.
+
+```sh
+curl -L https://raw.githubusercontent.com/tyayers/apimsync/main/install.sh | sh -
+```
+
+Or build the binary yourself.
 
 ```sh
 # build
