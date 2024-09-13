@@ -171,7 +171,7 @@ func azureStatus(flags *AzureFlags) PlatformStatus {
 }
 
 func azureServiceExport(flags *AzureFlags) error {
-	var baseDir = "data/src/main/azure"
+	var baseDir = "src/main/azure"
 	var token string = flags.Token
 	if flags.Subscription == "" {
 		fmt.Println("No subscription given, cannot export Azure APIs.")
@@ -224,7 +224,7 @@ func azureServiceExport(flags *AzureFlags) error {
 }
 
 func azureExport(flags *AzureFlags) error {
-	var baseDir = "data/src/main/azure/apiproxies"
+	var baseDir = "src/main/azure/apiproxies"
 	var token string = flags.Token
 	if flags.Subscription == "" {
 		fmt.Println("No subscription given, cannot export Azure APIs.")
@@ -374,8 +374,8 @@ func getAzureApiSchema(subscriptionId string, resourceGroup string, serviceName 
 
 func azureOfframp(flags *AzureFlags) error {
 
-	azureBaseDir := "data/src/main/azure/apiproxies"
-	baseDir := "data/src/main/general/apiproxies"
+	azureBaseDir := "src/main/azure/apiproxies"
+	baseDir := "src/main/general/apiproxies"
 
 	if flags.Subscription == "" {
 		fmt.Println("No subscription given, cannot offramp Azure APIs.")

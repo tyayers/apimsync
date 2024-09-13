@@ -152,8 +152,8 @@ func apiHubStatus(flags *ApigeeFlags) PlatformStatus {
 }
 
 func apiHubOnramp(flags *ApigeeFlags) error {
-	generalBaseDir := "data/src/main/general/apiproxies"
-	baseDir := "data/src/main/apihub/apiproxies"
+	generalBaseDir := "src/main/general/apiproxies"
+	baseDir := "src/main/apihub/apiproxies"
 
 	if flags.Project == "" {
 		fmt.Println("No project given.")
@@ -304,7 +304,7 @@ func apiHubImport(flags *ApigeeFlags) error {
 	}
 
 	fmt.Println("Importing APIs to API Hub in project " + flags.Project + "...")
-	var baseDir = "data/src/main/apihub/apiproxies"
+	var baseDir = "src/main/apihub/apiproxies"
 	if flags.Token == "" {
 		var token *oauth2.Token
 		scopes := []string{

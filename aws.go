@@ -85,7 +85,7 @@ func awsStatus(flags *AwsFlags) PlatformStatus {
 }
 
 func awsExport(flags *AwsFlags) error {
-	var baseDir = "data/src/main/aws/apiproxies"
+	var baseDir = "src/main/aws/apiproxies"
 	if flags.Region == "" {
 		flags.Region = os.Getenv("AWS_REGION")
 		if flags.Region == "" {
@@ -135,8 +135,8 @@ func awsExport(flags *AwsFlags) error {
 
 func awsOfframp(flags *AwsFlags) error {
 
-	awsBaseDir := "data/src/main/aws/apiproxies"
-	baseDir := "data/src/main/general/apiproxies"
+	awsBaseDir := "src/main/aws/apiproxies"
+	baseDir := "src/main/general/apiproxies"
 
 	if flags.Region == "" {
 		flags.Region = os.Getenv("AWS_REGION")

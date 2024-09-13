@@ -28,7 +28,7 @@ type PlatformStatus struct {
 
 func main() {
 	// Create new cli
-	cli := clir.NewCli("apimsync", "A syncing tool between API platforms", "v0.0.1")
+	cli := clir.NewCli("apimsync", "A syncing tool for API platforms", "v0.1.4")
 
 	webServerCommand := cli.NewSubCommand("ws", "Functions for the web server.")
 	webServerCommand.NewSubCommandFunction("start", "Start a web server to listen for commands.", webServerStart)

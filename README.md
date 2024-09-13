@@ -50,7 +50,7 @@ Install the binary `apimsync` to your `/usr/bin` directory.
 curl -L https://raw.githubusercontent.com/tyayers/apimsync/main/install.sh | sh -
 ```
 
-Or build the binary yourself.
+Or build the binary yourself:
 
 ```sh
 # build
