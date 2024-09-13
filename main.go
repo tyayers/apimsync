@@ -28,7 +28,7 @@ type PlatformStatus struct {
 
 func main() {
 	// Create new cli
-	cli := clir.NewCli("apimsync", "A syncing tool for API platforms", "v0.1.4")
+	cli := clir.NewCli("apimsync", "A syncing tool for API & integration platforms", "v0.1.5")
 
 	webServerCommand := cli.NewSubCommand("ws", "Functions for the web server.")
 	webServerCommand.NewSubCommandFunction("start", "Start a web server to listen for commands.", webServerStart)
@@ -41,6 +41,12 @@ func main() {
 	apigeeTestCommand := apigeeCommand.NewSubCommand("test", "Local test commands.")
 	apigeeTestCommand.NewSubCommandFunction("init", "Initializes local test data for an environment.", initApigeeTest)
 
+	apiHubCommand := cli.NewSubCommand("apihub", "Functions for Apigee API Hub.")
+	apiHubApisCommand := apiHubCommand.NewSubCommand("apis", "Functions for API Hub API resources.")
+	apiHubApisCommand.NewSubCommandFunction("onramp", "Onramps APIs from general to API Hub.", apiHubOnramp)
+	apiHubApisCommand.NewSubCommandFunction("import", "Imports APIs to API Hub.", apiHubImport)
+	apiHubApisCommand.NewSubCommandFunction("clean", "Imports APIs to API Hub.", apiHubClean)
+
 	azureCommand := cli.NewSubCommand("azure", "Functions for Azure API Management.")
 	azureCommand.NewSubCommandFunction("export", "Exports Azure API Management service info.", azureServiceExport)
 	azureApisCommand := azureCommand.NewSubCommand("apis", "Functions for Azure API Management API resources.")
@@ -51,12 +57,6 @@ func main() {
 	awsApisCommand := awsCommand.NewSubCommand("apis", "Functions for AWS API Gateway API resources.")
 	awsApisCommand.NewSubCommandFunction("export", "Exports AWS API Gateway APIs.", awsExport)
 	awsApisCommand.NewSubCommandFunction("offramp", "Offramp AWS API Gateway APIs.", awsOfframp)
-
-	apiHubCommand := cli.NewSubCommand("apihub", "Functions for Apigee API Hub.")
-	apiHubApisCommand := apiHubCommand.NewSubCommand("apis", "Functions for API Hub API resources.")
-	apiHubApisCommand.NewSubCommandFunction("onramp", "Onramps APIs from general to API Hub.", apiHubOnramp)
-	apiHubApisCommand.NewSubCommandFunction("import", "Imports APIs to API Hub.", apiHubImport)
-	apiHubApisCommand.NewSubCommandFunction("clean", "Imports APIs to API Hub.", apiHubClean)
 
 	err := cli.Run()
 

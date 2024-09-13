@@ -252,7 +252,7 @@ func apigeeImport(flags *ApigeeFlags) error {
 					fmt.Println("Error importing Apigee API: " + err.Error())
 				}
 				os.Remove(e.Name() + ".zip")
-				os.Chdir(baseDir + "../../../../..")
+				os.Chdir("../../../../..")
 			}
 		}
 	}
@@ -437,7 +437,7 @@ func createApigeeApi(org string, token string, name string) error {
 	file, _ := os.Open(filePath)
 	defer file.Close()
 
-	fmt.Println(filepath.Base(file.Name()))
+	//fmt.Println(filepath.Base(file.Name()))
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

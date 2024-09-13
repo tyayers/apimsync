@@ -1,9 +1,9 @@
 # Apimsync
-A tool to help synchronize API assets between different API platforms. The tool can either be used as a CLI, or as a web service for remote calls.
+A tool to help synchronize API management (apim) assets between different platforms. The tool can either be used as a CLI, or as a web service.
 
 ## Example usage
 
-These commands offramp APIs from an Azure APIM service, and then onramp them into Apigee API Hub.
+These commands can offramp APIs from an Azure APIM service, and then onramp them into Apigee API Hub.
 
 ```sh
 # source env variables
