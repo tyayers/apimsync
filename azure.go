@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -170,6 +171,12 @@ func azureStatus(flags *AzureFlags) PlatformStatus {
 	return status
 }
 
+func azureCleanLocal(flags *AzureFlags) error {
+	var baseDir = "src/main/azure"
+	os.RemoveAll(baseDir)
+	return nil
+}
+
 func azureServiceExport(flags *AzureFlags) error {
 	var baseDir = "src/main/azure"
 	var token string = flags.Token
@@ -268,18 +275,22 @@ func azureExport(flags *AzureFlags) error {
 			if (flags.ApiName == "" || flags.ApiName == api.Name) && !strings.Contains(api.Name, ";rev=") {
 				fmt.Println("Exporting " + api.Name + "...")
 				bytes, _ := json.MarshalIndent(api, "", " ")
-				os.RemoveAll(baseDir + "/" + api.Name)
-				os.MkdirAll(baseDir+"/"+api.Name, 0755)
-				os.WriteFile(baseDir+"/"+api.Name+"/"+api.Name+".json", bytes, 0644)
+
+				var re = regexp.MustCompile(`(-v\d+)$`)
+				newName := re.ReplaceAllString(api.Name, "")
+
+				// os.RemoveAll(baseDir + "/" + newName)
+				os.MkdirAll(baseDir+"/"+newName, 0755)
+				os.WriteFile(baseDir+"/"+newName+"/"+api.Name+".json", bytes, 0644)
 
 				schema := getAzureApiSchema(flags.Subscription, flags.ResourceGroup, flags.ServiceName, api.Name, token)
 
 				if schema.Id != "" {
 					bytes, _ := json.MarshalIndent(schema, "", " ")
-					os.WriteFile(baseDir+"/"+api.Name+"/schema-definition.json", bytes, 0644)
+					os.WriteFile(baseDir+"/"+newName+"/"+api.Name+"-oas-definition.json", bytes, 0644)
 
 					doc_bytes := []byte(schema.Properties.Document)
-					os.WriteFile(baseDir+"/"+api.Name+"/schema."+schema.Properties.SchemaType, doc_bytes, 0644)
+					os.WriteFile(baseDir+"/"+newName+"/"+api.Name+"-oas."+schema.Properties.SchemaType, doc_bytes, 0644)
 				}
 			}
 		}
@@ -407,45 +418,52 @@ func azureOfframp(flags *AzureFlags) error {
 	for _, e := range entries {
 		if flags.ApiName == "" || flags.ApiName == e.Name() {
 			fmt.Println(e.Name())
-			var azureApi AzureApi
-			apiFile, err := os.Open(azureBaseDir + "/" + e.Name() + "/" + e.Name() + ".json")
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				byteValue, _ := io.ReadAll(apiFile)
-				json.Unmarshal(byteValue, &azureApi)
-			}
-			defer apiFile.Close()
 
-			if azureApi.Name != "" {
-				var generalApi GeneralApi
-				generalApi.Name = azureApi.Name
-				generalApi.DisplayName = azureApi.Properties.DisplayName
-				if azureApi.Properties.ApiVersion != "" {
-					generalApi.DisplayName += " " + azureApi.Properties.ApiVersion
-				}
-				generalApi.Description = azureApi.Properties.Description
-				generalApi.Version = azureApi.Properties.ApiVersion
-				generalApi.OwnerEmail = azureService.Properties.PublisherEmail
-				generalApi.OwnerName = azureService.Properties.PublisherName
-				generalApi.DocumentationUrl = azureService.Properties.DeveloperPortalUrl + "/api-details#api=" + e.Name()
-				generalApi.GatewayUrl = azureService.Properties.GatewayUrl + "/" + azureApi.Properties.Path
-				generalApi.BasePath = azureApi.Properties.Path
-				generalApi.PlatformId = "azure"
-				generalApi.PlatformName = "Azure API Management"
-				generalApi.PlatformResourceUri = "https://portal.azure.com/#resource/subscriptions/" + flags.Subscription + "/resourceGroups/" + flags.ResourceGroup + "/providers/Microsoft.ApiManagement/service/" + flags.ServiceName + "/overview?apiName=" + e.Name()
+			// read all files
+			fileEntries, _ := os.ReadDir(azureBaseDir + "/" + e.Name())
+			for _, f := range fileEntries {
+				if !strings.HasSuffix(f.Name(), "-oas.json") && !strings.HasSuffix(f.Name(), "-oas-definition.json") {
+					// this is an API file
+					var azureApi AzureApi
+					apiFile, err := os.Open(azureBaseDir + "/" + e.Name() + "/" + f.Name())
 
-				bytes, _ := json.MarshalIndent(generalApi, "", " ")
-				os.RemoveAll(baseDir + "/" + generalApi.Name)
-				os.MkdirAll(baseDir+"/"+generalApi.Name, 0755)
+					if err != nil {
+						log.Fatal(err)
+					} else {
+						byteValue, _ := io.ReadAll(apiFile)
+						json.Unmarshal(byteValue, &azureApi)
+					}
+					defer apiFile.Close()
 
-				os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+".json", bytes, 0644)
+					if azureApi.Name != "" {
+						var generalApi GeneralApi
+						generalApi.Name = azureApi.Name + "-azure"
+						generalApi.DisplayName = azureApi.Properties.DisplayName
+						generalApi.Description = azureApi.Properties.Description
+						generalApi.Version = azureApi.Properties.ApiVersion
+						generalApi.OwnerEmail = azureService.Properties.PublisherEmail
+						generalApi.OwnerName = azureService.Properties.PublisherName
+						generalApi.DocumentationUrl = azureService.Properties.DeveloperPortalUrl + "/api-details#api=" + e.Name()
+						generalApi.GatewayUrl = azureService.Properties.GatewayUrl + "/" + azureApi.Properties.Path
+						generalApi.BasePath = azureApi.Properties.Path
+						generalApi.PlatformId = "azure-api-management"
+						generalApi.PlatformName = "Azure API Management"
+						generalApi.PlatformResourceUri = "https://portal.azure.com/#resource/subscriptions/" + flags.Subscription + "/resourceGroups/" + flags.ResourceGroup + "/providers/Microsoft.ApiManagement/service/" + flags.ServiceName + "/overview?apiName=" + e.Name()
 
-				schemaFile, err := os.Open(azureBaseDir + "/" + e.Name() + "/schema.json")
-				if err == nil {
-					// we have an api spec, copy it over
-					byteValue, _ := io.ReadAll(schemaFile)
-					os.WriteFile(baseDir+"/"+generalApi.Name+"/openapi.json", byteValue, 0644)
+						bytes, _ := json.MarshalIndent(generalApi, "", " ")
+						//os.RemoveAll(baseDir + "/" + generalApi.Name)
+						os.MkdirAll(baseDir+"/"+e.Name(), 0755)
+
+						os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+".json", bytes, 0644)
+
+						schemaFile, err := os.Open(azureBaseDir + "/" + e.Name() + "/" + azureApi.Name + "-oas.json")
+						if err == nil {
+							// we have an api spec, copy it over
+							byteValue, _ := io.ReadAll(schemaFile)
+							os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+"-oas.json", byteValue, 0644)
+						}
+					}
 				}
 			}
 		}

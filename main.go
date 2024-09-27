@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/leaanthony/clir"
 )
@@ -26,9 +27,17 @@ type PlatformStatus struct {
 	Message   string `json:"message"`
 }
 
+type GeneralFlags struct {
+	ApiName string `name:"api" description:"A specific Azure API Management API."`
+}
+
 func main() {
 	// Create new cli
 	cli := clir.NewCli("apimsync", "A syncing tool for API & integration platforms", "v0.1.5")
+
+	generalCommand := cli.NewSubCommand("general", "Functions for general offramped APIs.")
+	generalApisCommand := generalCommand.NewSubCommand("apis", "Functions for General API resources.")
+	generalApisCommand.NewSubCommandFunction("cleanlocal", "Removes all APIs from offramped general definitions in local storage.", generalCleanLocal)
 
 	webServerCommand := cli.NewSubCommand("ws", "Functions for the web server.")
 	webServerCommand.NewSubCommandFunction("start", "Start a web server to listen for commands.", webServerStart)
@@ -45,18 +54,21 @@ func main() {
 	apiHubApisCommand := apiHubCommand.NewSubCommand("apis", "Functions for API Hub API resources.")
 	apiHubApisCommand.NewSubCommandFunction("onramp", "Onramps APIs from general to API Hub.", apiHubOnramp)
 	apiHubApisCommand.NewSubCommandFunction("import", "Imports APIs to API Hub.", apiHubImport)
-	apiHubApisCommand.NewSubCommandFunction("clean", "Imports APIs to API Hub.", apiHubClean)
+	apiHubApisCommand.NewSubCommandFunction("clean", "Removes all APIs from API Hub.", apiHubClean)
+	apiHubApisCommand.NewSubCommandFunction("cleanlocal", "Removes all API Hub APIs from local storage.", apiHubCleanLocal)
 
 	azureCommand := cli.NewSubCommand("azure", "Functions for Azure API Management.")
 	azureCommand.NewSubCommandFunction("export", "Exports Azure API Management service info.", azureServiceExport)
 	azureApisCommand := azureCommand.NewSubCommand("apis", "Functions for Azure API Management API resources.")
 	azureApisCommand.NewSubCommandFunction("export", "Exports Azure API Management APIs.", azureExport)
 	azureApisCommand.NewSubCommandFunction("offramp", "Migrates Azure API Management APIs out to general.", azureOfframp)
+	azureApisCommand.NewSubCommandFunction("cleanlocal", "Removes all exported Azure APIs from local storage.", azureCleanLocal)
 
 	awsCommand := cli.NewSubCommand("aws", "Functions for AWS API Gateway.")
 	awsApisCommand := awsCommand.NewSubCommand("apis", "Functions for AWS API Gateway API resources.")
 	awsApisCommand.NewSubCommandFunction("export", "Exports AWS API Gateway APIs.", awsExport)
 	awsApisCommand.NewSubCommandFunction("offramp", "Offramp AWS API Gateway APIs.", awsOfframp)
+	awsApisCommand.NewSubCommandFunction("cleanlocal", "Removes all exported AWS APIs from local storage.", awsCleanLocal)
 
 	err := cli.Run()
 
@@ -64,4 +76,10 @@ func main() {
 		// We had an error
 		log.Fatal(err)
 	}
+}
+
+func generalCleanLocal(flags *GeneralFlags) error {
+	var baseDir = "src/main/general"
+	os.RemoveAll(baseDir)
+	return nil
 }

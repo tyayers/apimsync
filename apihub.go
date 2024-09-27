@@ -22,12 +22,12 @@ type HubApis struct {
 }
 
 type HubApi struct {
-	Name          string              `json:"name"`
-	DisplayName   string              `json:"displayName"`
-	Description   string              `json:"description"`
-	Documentation HubApiDocumentation `json:"documentation"`
-	Owner         HubApiOwner         `json:"owner"`
-	Versions      []string            `json:"versions"`
+	Name          string               `json:"name"`
+	DisplayName   string               `json:"displayName"`
+	Description   string               `json:"description"`
+	Documentation *HubApiDocumentation `json:"documentation,omitempty"`
+	Owner         *HubApiOwner         `json:"owner,omitempty"`
+	Versions      *[]string            `json:"versions,omitempty"`
 }
 
 type HubApiDocumentation struct {
@@ -186,34 +186,15 @@ func apiHubOnramp(flags *ApigeeFlags) error {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Onramping APIs to API Hub...")
-
-	// First index all root APIs
-	var rootApis map[string]string = make(map[string]string)
-	for _, e := range entries {
-		var generalApi GeneralApi
-		apiFile, err := os.Open(generalBaseDir + "/" + e.Name() + "/" + e.Name() + ".json")
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			byteValue, _ := io.ReadAll(apiFile)
-			json.Unmarshal(byteValue, &generalApi)
-		}
-		defer apiFile.Close()
-
-		if generalApi.Version == "" {
-			// This is a root API (version 1)
-			rootApis[generalApi.BasePath] = generalApi.Name
-		}
-	}
-
 	for _, e := range entries {
 		if flags.ApiName == "" || flags.ApiName == e.Name() {
 			fmt.Println(e.Name())
+
 			var generalApi GeneralApi
 			apiFile, err := os.Open(generalBaseDir + "/" + e.Name() + "/" + e.Name() + ".json")
 			if err != nil {
 				log.Fatal(err)
+				return err
 			} else {
 				byteValue, _ := io.ReadAll(apiFile)
 				json.Unmarshal(byteValue, &generalApi)
@@ -221,71 +202,114 @@ func apiHubOnramp(flags *ApigeeFlags) error {
 			defer apiFile.Close()
 
 			if generalApi.Name != "" {
-				os.MkdirAll(baseDir+"/"+generalApi.Name, 0755)
+				os.MkdirAll(baseDir+"/"+e.Name(), 0755)
 
-				var apiName = generalApi.Name
-				rootName, ok := rootApis[generalApi.BasePath]
-				if ok {
-					apiName = rootName
+				var apiName = e.Name()
+
+				// create API
+				var hubApi HubApi
+				hubApi.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName
+				hubApi.DisplayName = generalApi.DisplayName
+				hubApi.Description = generalApi.Description
+				if generalApi.DocumentationUrl != "" {
+					var doc HubApiDocumentation
+					doc.ExternalUri = generalApi.DocumentationUrl
+					hubApi.Documentation = &doc
 				}
 
-				// create API, if it is a root API (not just a version)
-				if generalApi.Version == "" {
-					var hubApi HubApi
-					hubApi.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName
-					hubApi.DisplayName = generalApi.DisplayName
-					hubApi.Description = generalApi.Description
-					hubApi.Documentation.ExternalUri = generalApi.DocumentationUrl
-					hubApi.Owner.DisplayName = generalApi.OwnerName
-					hubApi.Owner.Email = generalApi.OwnerEmail
-					bytes, _ := json.MarshalIndent(hubApi, "", "  ")
-					os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+".json", bytes, 0644)
+				if generalApi.OwnerName != "" {
+					var owner HubApiOwner
+					owner.DisplayName = generalApi.OwnerName
+					owner.Email = generalApi.OwnerEmail
+					hubApi.Owner = &owner
 				}
 
-				// create deployment
-				var hubApiDeployment HubApiDeployment
-				hubApiDeployment.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/deployments/" + generalApi.Name
-				hubApiDeployment.DisplayName = generalApi.DisplayName
-				hubApiDeployment.Description = generalApi.Description
-				hubApiDeployment.Documentation.ExternalUri = generalApi.DocumentationUrl
-				hubApiDeployment.DeploymentType.Attribute = "projects/" + flags.Project + "/locations/" + flags.Region + "/attributes/system-deployment-type"
-				platformId := "others"
-				platformName := "Others"
-				platformDescription := "Others"
-				apiDeploymentType := HubAttributeValue{Id: platformId, DisplayName: platformName, Description: platformDescription, Immutable: true}
-				hubApiDeployment.DeploymentType.EnumValues.Values = append(hubApiDeployment.DeploymentType.EnumValues.Values, apiDeploymentType)
-				hubApiDeployment.ResourceUri = generalApi.PlatformResourceUri
-				hubApiDeployment.Endpoints = append(hubApiDeployment.Endpoints, generalApi.GatewayUrl)
-				hubApiDeployment.ApiVersions = append(hubApiDeployment.ApiVersions, generalApi.Version)
-				bytes, _ := json.MarshalIndent(hubApiDeployment, "", "  ")
-				os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+"-deployment.json", bytes, 0644)
+				bytes, _ := json.MarshalIndent(hubApi, "", "  ")
+				os.WriteFile(baseDir+"/"+apiName+"/"+apiName+".json", bytes, 0644)
 
-				// create API version
-				// we use the extended version here to include the BaseApiName that we use in apihub to connect the version to a base api
-				var hubApiVersion HubApiVersionExtended
-				hubApiVersion.BaseApiName = apiName
-				hubApiVersion.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + generalApi.Name
-				hubApiVersion.DisplayName = generalApi.DisplayName
-				hubApiVersion.Description = generalApi.Description
-				hubApiVersion.Documentation.ExternalUri = generalApi.DocumentationUrl
-				hubApiVersion.Deployments = append(hubApiVersion.Deployments, hubApiDeployment.Name)
-				bytes, _ = json.MarshalIndent(hubApiVersion, "", "  ")
-				os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+"-version.json", bytes, 0644)
+				var apiVersions map[string][]HubApiDeployment = make(map[string][]HubApiDeployment)
 
-				// create API spec, if available
-				b, err := os.ReadFile(generalBaseDir + "/" + generalApi.Name + "/openapi.json")
-				if err == nil {
-					// we have a spec file
-					var hubApiVersionSpec HubApiVersionSpec
-					hubApiVersionSpec.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + generalApi.Name + "/specs/" + generalApi.Name
-					hubApiVersionSpec.DisplayName = generalApi.DisplayName
-					apiSpecType := HubAttributeValue{Id: "openapi", DisplayName: "OpenAPI Spec", Description: "OpenAPI Spec", Immutable: true}
-					hubApiVersionSpec.SpecType.EnumValues.Values = append(hubApiVersionSpec.SpecType.EnumValues.Values, apiSpecType)
-					hubApiVersionSpec.Contents.MimeType = "application/json"
-					hubApiVersionSpec.Contents.Contents = b64.StdEncoding.EncodeToString(b)
-					hubApiVersionSpec.Documentation.ExternalUri = generalApi.DocumentationUrl
-					bytes, _ = json.MarshalIndent(hubApiVersionSpec, "", "  ")
-					os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+"-version-spec.json", bytes, 0644)
+				// read all files
+				fileEntries, _ := os.ReadDir(generalBaseDir + "/" + e.Name())
+				for _, f := range fileEntries {
+					if strings.HasSuffix(f.Name(), "-aws.json") || strings.HasSuffix(f.Name(), "-azure.json") {
+						fmt.Println(f.Name())
+						apiVersionName := strings.ReplaceAll(f.Name(), "-aws.json", "")
+						apiVersionName = strings.ReplaceAll(apiVersionName, "-azure.json", "")
+
+						// create deployment
+						var generalDeploymentApi GeneralApi
+						apiFile, err := os.Open(generalBaseDir + "/" + apiName + "/" + f.Name())
+						if err != nil {
+							log.Fatal(err)
+							return err
+						} else {
+							byteValue, _ := io.ReadAll(apiFile)
+							json.Unmarshal(byteValue, &generalDeploymentApi)
+						}
+						defer apiFile.Close()
+
+						if generalDeploymentApi.Name != "" {
+							fmt.Println(generalDeploymentApi.Name)
+
+							// create deployment
+							var hubApiDeployment HubApiDeployment
+							hubApiDeployment.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/deployments/" + generalDeploymentApi.Name
+							hubApiDeployment.DisplayName = generalDeploymentApi.DisplayName
+							hubApiDeployment.Description = generalDeploymentApi.Description
+							hubApiDeployment.Documentation.ExternalUri = generalDeploymentApi.DocumentationUrl
+							hubApiDeployment.DeploymentType.Attribute = "projects/" + flags.Project + "/locations/" + flags.Region + "/attributes/system-deployment-type"
+							apiDeploymentType := HubAttributeValue{Id: generalDeploymentApi.PlatformId, DisplayName: generalDeploymentApi.PlatformName, Description: generalDeploymentApi.PlatformName, Immutable: true}
+							hubApiDeployment.DeploymentType.EnumValues.Values = append(hubApiDeployment.DeploymentType.EnumValues.Values, apiDeploymentType)
+							hubApiDeployment.ResourceUri = generalDeploymentApi.PlatformResourceUri
+							hubApiDeployment.Endpoints = append(hubApiDeployment.Endpoints, generalDeploymentApi.GatewayUrl)
+							hubApiDeployment.ApiVersions = append(hubApiDeployment.ApiVersions, generalDeploymentApi.Version)
+							bytes, _ := json.MarshalIndent(hubApiDeployment, "", "  ")
+							os.WriteFile(baseDir+"/"+apiName+"/"+generalDeploymentApi.Name+".json", bytes, 0644)
+
+							// record deployment for version
+							_, ok := apiVersions[apiVersionName]
+							if ok {
+								apiVersions[apiVersionName] = append(apiVersions[apiVersionName], hubApiDeployment)
+							} else {
+								apiVersions[apiVersionName] = []HubApiDeployment{hubApiDeployment}
+							}
+
+							// create API spec, if available
+							b, err := os.ReadFile(generalBaseDir + "/" + apiName + "/" + generalDeploymentApi.Name + "-oas.json")
+							if err == nil {
+								// we have a spec file
+								var hubApiVersionSpec HubApiVersionSpec
+								hubApiVersionSpec.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + apiVersionName + "/specs/" + generalDeploymentApi.Name
+								hubApiVersionSpec.DisplayName = generalApi.DisplayName
+								apiSpecType := HubAttributeValue{Id: "openapi", DisplayName: "OpenAPI Spec", Description: "OpenAPI Spec", Immutable: true}
+								hubApiVersionSpec.SpecType.EnumValues.Values = append(hubApiVersionSpec.SpecType.EnumValues.Values, apiSpecType)
+								hubApiVersionSpec.Contents.MimeType = "application/json"
+								hubApiVersionSpec.Contents.Contents = b64.StdEncoding.EncodeToString(b)
+								hubApiVersionSpec.Documentation.ExternalUri = generalApi.DocumentationUrl
+								bytes, _ = json.MarshalIndent(hubApiVersionSpec, "", "  ")
+								os.WriteFile(baseDir+"/"+apiName+"/"+generalDeploymentApi.Name+"-oas.json", bytes, 0644)
+							}
+						}
+					}
+				}
+
+				for k, v := range apiVersions {
+					// create API version
+					// we use the extended version here to include the BaseApiName that we use in apihub to connect the version to a base api
+					var hubApiVersion HubApiVersionExtended
+					hubApiVersion.BaseApiName = apiName
+					hubApiVersion.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + k
+					hubApiVersion.DisplayName = generalApi.DisplayName
+					hubApiVersion.Description = generalApi.Description
+					hubApiVersion.Documentation.ExternalUri = generalApi.DocumentationUrl
+
+					for _, d := range v {
+						hubApiVersion.Deployments = append(hubApiVersion.Deployments, d.Name)
+					}
+
+					bytes, _ := json.MarshalIndent(hubApiVersion, "", "  ")
+					os.WriteFile(baseDir+"/"+apiName+"/"+k+".json", bytes, 0644)
 				}
 			}
 		}
@@ -346,96 +370,127 @@ func apiHubImport(flags *ApigeeFlags) error {
 					if resp.StatusCode != 200 {
 						fmt.Println("  >> Error creating " + e.Name() + ": " + resp.Status)
 					}
+				} else {
+					fmt.Println("  >> Error, cloud not create API in API Hub because the definition file could not be found: " + e.Name() + ".json")
 				}
 				defer apiFile.Close()
 
-				// Create Deployment
-				deploymentFile, deployErr := os.Open(baseDir + "/" + e.Name() + "/" + e.Name() + "-deployment.json")
-				if deployErr == nil {
-					var apiDeployment HubApiDeployment
-					byteValue, _ := io.ReadAll(deploymentFile)
-					json.Unmarshal(byteValue, &apiDeployment)
-					requestBody := bytes.NewBuffer(byteValue)
-					deploymentUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/deployments?deploymentId=" + e.Name()
-					r, _ := http.NewRequest(http.MethodPost, deploymentUrl, requestBody)
-					r.Header.Add("Content-Type", "application/json")
-					r.Header.Add("Authorization", "Bearer "+flags.Token)
-					client := &http.Client{}
-					fmt.Println("Creating deployment " + e.Name() + "...")
-					resp, _ := client.Do(r)
+				var apiVersions map[string][]string = make(map[string][]string)
+				// read all files
+				fileEntries, _ := os.ReadDir(baseDir + "/" + e.Name())
+				for _, f := range fileEntries {
+					if strings.HasSuffix(f.Name(), "-aws.json") || strings.HasSuffix(f.Name(), "-azure.json") {
+						fmt.Println(f.Name())
+						apiDeploymentName := strings.ReplaceAll(f.Name(), ".json", "")
+						apiVersionName := strings.ReplaceAll(f.Name(), "-aws.json", "")
+						apiVersionName = strings.ReplaceAll(apiVersionName, "-azure.json", "")
 
-					if resp.StatusCode != 200 {
-						fmt.Println("  >> Error creating deployment " + e.Name() + ": " + resp.Status)
-						defer resp.Body.Close()
-						//Read the response body
-						respBody, _ := io.ReadAll(resp.Body)
-						sb := string(respBody)
-						fmt.Println(sb)
+						// Create Deployment
+						deploymentFile, deployErr := os.Open(baseDir + "/" + e.Name() + "/" + f.Name())
+						if deployErr == nil {
+							var apiDeployment HubApiDeployment
+							byteValue, _ := io.ReadAll(deploymentFile)
+							json.Unmarshal(byteValue, &apiDeployment)
+							requestBody := bytes.NewBuffer(byteValue)
+							deploymentUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/deployments?deploymentId=" + apiDeploymentName
+							r, _ := http.NewRequest(http.MethodPost, deploymentUrl, requestBody)
+							r.Header.Add("Content-Type", "application/json")
+							r.Header.Add("Authorization", "Bearer "+flags.Token)
+							client := &http.Client{}
+							fmt.Println("Creating deployment " + apiDeployment.Name + "...")
+							fmt.Println(deploymentUrl)
+							resp, _ := client.Do(r)
+
+							if resp.StatusCode != 200 {
+								fmt.Println("  >> Error creating deployment " + apiDeployment.Name + ": " + resp.Status)
+								defer resp.Body.Close()
+								//Read the response body
+								respBody, _ := io.ReadAll(resp.Body)
+								sb := string(respBody)
+								fmt.Println(sb)
+							}
+						}
+						defer deploymentFile.Close()
+
+						// record deployment for version
+						_, ok := apiVersions[apiVersionName]
+						if ok {
+							apiVersions[apiVersionName] = append(apiVersions[apiVersionName], apiDeploymentName)
+						} else {
+							apiVersions[apiVersionName] = []string{apiDeploymentName}
+						}
 					}
 				}
-				defer deploymentFile.Close()
 
-				// Create API Version
-				baseApiName := e.Name()
-				versionFile, err := os.Open(baseDir + "/" + e.Name() + "/" + e.Name() + "-version.json")
-				if err == nil {
-					var apiVersionExtended HubApiVersionExtended
-					byteValue, _ := io.ReadAll(versionFile)
-					json.Unmarshal(byteValue, &apiVersionExtended)
-					var apiVersion HubApiVersion = apiVersionExtended.HubApiVersion
-					bodyBytes, _ := json.Marshal(apiVersion)
-					requestBody := bytes.NewBuffer(bodyBytes)
+				for k, v := range apiVersions {
+					// create API version
+					versionFile, err := os.Open(baseDir + "/" + e.Name() + "/" + k + ".json")
+					if err == nil {
+						var apiVersionExtended HubApiVersionExtended
+						byteValue, _ := io.ReadAll(versionFile)
+						json.Unmarshal(byteValue, &apiVersionExtended)
+						var apiVersion HubApiVersion = apiVersionExtended.HubApiVersion
+						bodyBytes, _ := json.Marshal(apiVersion)
+						requestBody := bytes.NewBuffer(bodyBytes)
 
-					baseApiName = apiVersionExtended.BaseApiName
-					versionUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + baseApiName + "/versions?versionId=" + e.Name()
-					r, _ := http.NewRequest(http.MethodPost, versionUrl, requestBody)
-					r.Header.Add("Content-Type", "application/json")
-					r.Header.Add("Authorization", "Bearer "+flags.Token)
-					client := &http.Client{}
-					fmt.Println("Creating API version " + e.Name() + "...")
-					resp, _ := client.Do(r)
+						versionUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + e.Name() + "/versions?versionId=" + k
+						r, _ := http.NewRequest(http.MethodPost, versionUrl, requestBody)
+						r.Header.Add("Content-Type", "application/json")
+						r.Header.Add("Authorization", "Bearer "+flags.Token)
+						client := &http.Client{}
+						fmt.Println("Creating API version " + e.Name() + "...")
+						resp, _ := client.Do(r)
 
-					if resp.StatusCode != 200 {
-						fmt.Println("  >> Error creating version " + e.Name() + ": " + resp.Status)
-						defer resp.Body.Close()
-						//Read the response body
-						respBody, _ := io.ReadAll(resp.Body)
-						sb := string(respBody)
-						fmt.Println(sb)
+						if resp.StatusCode != 200 {
+							fmt.Println("  >> Error creating version " + e.Name() + ": " + resp.Status)
+							defer resp.Body.Close()
+							//Read the response body
+							// respBody, _ := io.ReadAll(resp.Body)
+							// sb := string(respBody)
+							// fmt.Println(sb)
+						}
+					}
+					defer versionFile.Close()
+
+					for _, d := range v {
+						// Create API Version Spec
+						versionSpecFile, err := os.Open(baseDir + "/" + e.Name() + "/" + d + "-oas.json")
+						if err == nil {
+							var apiVersionSpec HubApiVersionSpec
+							byteValue, _ := io.ReadAll(versionSpecFile)
+							json.Unmarshal(byteValue, &apiVersionSpec)
+							requestBody := bytes.NewBuffer(byteValue)
+
+							versionUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + e.Name() + "/versions/" + k + "/specs?specId=" + d
+							r, _ := http.NewRequest(http.MethodPost, versionUrl, requestBody)
+							r.Header.Add("Content-Type", "application/json")
+							r.Header.Add("Authorization", "Bearer "+flags.Token)
+							client := &http.Client{}
+							fmt.Println("Creating API version spec " + e.Name() + "...")
+							resp, _ := client.Do(r)
+
+							if resp.StatusCode != 200 {
+								fmt.Println("  >> Error deploying version spec " + e.Name() + ": " + resp.Status)
+								defer resp.Body.Close()
+								//Read the response body
+								// respBody, _ := io.ReadAll(resp.Body)
+								// sb := string(respBody)
+								// fmt.Println(sb)
+							}
+						}
+						defer versionSpecFile.Close()
 					}
 				}
-				defer versionFile.Close()
-
-				// Create API Version Spec
-				versionSpecFile, err := os.Open(baseDir + "/" + e.Name() + "/" + e.Name() + "-version-spec.json")
-				if err == nil {
-					var apiVersionSpec HubApiVersionSpec
-					byteValue, _ := io.ReadAll(versionSpecFile)
-					json.Unmarshal(byteValue, &apiVersionSpec)
-					requestBody := bytes.NewBuffer(byteValue)
-
-					versionUrl := "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + baseApiName + "/versions/" + e.Name() + "/specs?specId=" + e.Name()
-					r, _ := http.NewRequest(http.MethodPost, versionUrl, requestBody)
-					r.Header.Add("Content-Type", "application/json")
-					r.Header.Add("Authorization", "Bearer "+flags.Token)
-					client := &http.Client{}
-					fmt.Println("Creating API version spec " + e.Name() + "...")
-					resp, _ := client.Do(r)
-
-					if resp.StatusCode != 200 {
-						fmt.Println("  >> Error deploying version spec " + e.Name() + ": " + resp.Status)
-						defer resp.Body.Close()
-						//Read the response body
-						respBody, _ := io.ReadAll(resp.Body)
-						sb := string(respBody)
-						fmt.Println(sb)
-					}
-				}
-				defer versionSpecFile.Close()
 			}
 		}
 	}
 
+	return nil
+}
+
+func apiHubCleanLocal(flags *ApigeeFlags) error {
+	var baseDir = "src/main/apihub"
+	os.RemoveAll(baseDir)
 	return nil
 }
 

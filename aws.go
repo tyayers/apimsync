@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
@@ -50,6 +52,12 @@ type AwsFlags struct {
 	AccessSecret string `name:"accessSecret" description:"The AWS secret key to use to authenticate with AWS."`
 	Region       string `name:"region" description:"The AWS region of the API Gateway."`
 	ApiName      string `name:"api" description:"A specific Azure API Management API."`
+}
+
+func awsCleanLocal(flags *AwsFlags) error {
+	var baseDir = "src/main/aws"
+	os.RemoveAll(baseDir)
+	return nil
 }
 
 func awsStatus(flags *AwsFlags) PlatformStatus {
@@ -111,10 +119,39 @@ func awsExport(flags *AwsFlags) error {
 				for _, api := range apis.Items {
 					if flags.ApiName == "" || flags.ApiName == *api.Name {
 						fmt.Println("Exporting " + *api.Name + "...")
+						outputType := "JSON"
+						specType := "OAS30"
+						apiExport, exportErr := client.ExportApi(context.TODO(), &apigatewayv2.ExportApiInput{
+							ApiId:         api.ApiId,
+							OutputType:    &outputType,
+							Specification: &specType,
+						})
+
+						if exportErr != nil {
+							fmt.Println(exportErr)
+						}
+
 						bytes, _ := json.MarshalIndent(api, "", " ")
-						os.RemoveAll(baseDir + "/" + *api.Name)
-						os.MkdirAll(baseDir+"/"+*api.Name, 0755)
-						os.WriteFile(baseDir+"/"+*api.Name+"/"+*api.Name+".json", bytes, 0644)
+
+						newName := strings.ReplaceAll(strings.ToLower(*api.Name), " ", "-")
+
+						var re = regexp.MustCompile(`(-v\d+)$`)
+						newName2 := re.ReplaceAllString(newName, "")
+
+						// newName2 := newName
+						// if *api.Version != "" {
+						// 	newName2 += "-v" + strings.Split(*api.Version, ".")[0]
+						// }
+
+						fmt.Println(newName2)
+						fmt.Println(newName)
+
+						os.RemoveAll(baseDir + "/" + newName)
+						os.MkdirAll(baseDir+"/"+newName2, 0755)
+						os.WriteFile(baseDir+"/"+newName2+"/"+newName+".json", bytes, 0644)
+						if apiExport != nil && apiExport.Body != nil {
+							os.WriteFile(baseDir+"/"+newName2+"/"+newName+"-oas.json", apiExport.Body, 0644)
+						}
 					}
 				}
 			} else {
@@ -138,14 +175,6 @@ func awsOfframp(flags *AwsFlags) error {
 	awsBaseDir := "src/main/aws/apiproxies"
 	baseDir := "src/main/general/apiproxies"
 
-	if flags.Region == "" {
-		flags.Region = os.Getenv("AWS_REGION")
-		if flags.Region == "" {
-			fmt.Println("No region given, cannot export AWS APIs.")
-			return nil
-		}
-	}
-
 	entries, err := os.ReadDir(awsBaseDir)
 	if err != nil {
 		log.Fatal(err)
@@ -156,31 +185,48 @@ func awsOfframp(flags *AwsFlags) error {
 	for _, e := range entries {
 		if flags.ApiName == "" || flags.ApiName == e.Name() {
 			fmt.Println(e.Name())
-			var awsApi types.Api
-			apiFile, err := os.Open(awsBaseDir + "/" + e.Name() + "/" + e.Name() + ".json")
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				byteValue, _ := io.ReadAll(apiFile)
-				json.Unmarshal(byteValue, &awsApi)
-			}
-			defer apiFile.Close()
 
-			if *awsApi.Name != "" {
-				var generalApi GeneralApi
-				generalApi.Name = *awsApi.Name
-				generalApi.DisplayName = *awsApi.Name
-				generalApi.Description = *awsApi.Description
-				generalApi.Version = *awsApi.Version
-				generalApi.GatewayUrl = *awsApi.ApiEndpoint
-				generalApi.PlatformId = "aws"
-				generalApi.PlatformName = "AWS API Gateway"
+			// read all files
+			fileEntries, _ := os.ReadDir(awsBaseDir + "/" + e.Name())
+			for _, f := range fileEntries {
+				if !strings.HasSuffix(f.Name(), "-oas.json") && !strings.HasSuffix(f.Name(), "-oas-definition.json") {
+					var awsApi types.Api
+					apiFile, err := os.Open(awsBaseDir + "/" + e.Name() + "/" + f.Name())
+					if err != nil {
+						log.Fatal(err)
+					} else {
+						byteValue, _ := io.ReadAll(apiFile)
+						json.Unmarshal(byteValue, &awsApi)
+					}
+					defer apiFile.Close()
 
-				bytes, _ := json.MarshalIndent(generalApi, "", " ")
-				os.RemoveAll(baseDir + "/" + generalApi.Name)
-				os.MkdirAll(baseDir+"/"+generalApi.Name, 0755)
+					if *awsApi.Name != "" {
+						var generalApi GeneralApi
+						baseName := strings.ReplaceAll(strings.ToLower(*awsApi.Name), " ", "-")
+						generalApi.Name = baseName + "-aws"
+						generalApi.DisplayName = *awsApi.Name
+						generalApi.Description = *awsApi.Description
+						generalApi.Version = *awsApi.Version
+						generalApi.GatewayUrl = *awsApi.ApiEndpoint
+						generalApi.PlatformId = "aws-api-gateway"
+						generalApi.PlatformName = "AWS API Gateway"
+						generalApi.PlatformResourceUri = "https://" + flags.Region + ".console.aws.amazon.com/apigateway/main/apis?api=" + *awsApi.ApiId
 
-				os.WriteFile(baseDir+"/"+generalApi.Name+"/"+generalApi.Name+".json", bytes, 0644)
+						bytes, _ := json.MarshalIndent(generalApi, "", " ")
+						//os.RemoveAll(baseDir + "/" + generalApi.Name)
+						os.MkdirAll(baseDir+"/"+e.Name(), 0755)
+
+						os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+".json", bytes, 0644)
+
+						schemaFile, err := os.Open(awsBaseDir + "/" + e.Name() + "/" + baseName + "-oas.json")
+						if err == nil {
+							// we have an api spec, copy it over
+							byteValue, _ := io.ReadAll(schemaFile)
+							os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+"-oas.json", byteValue, 0644)
+						}
+					}
+				}
 			}
 		}
 	}

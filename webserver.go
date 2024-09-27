@@ -29,7 +29,7 @@ type ApimStatus struct {
 
 type ApimSyncInput struct {
 	Body struct {
-		Offramp string `json:"offramp" enum:"azure" doc:"The APIM platform to offramp the APIs from."`
+		Offramp string `json:"offramp" enum:"azure,aws" doc:"The APIM platform to offramp the APIs from."`
 		Onramp  string `json:"onramp" enum:"apihub" doc:"The APIM platform to onramp the APIs to."`
 	}
 }
@@ -42,7 +42,6 @@ type ApimSyncOutput struct {
 }
 
 func webServerStart(flags *WebServerFlags) error {
-
 	// Create a CLI app which takes a port option.
 	cli := humacli.New(func(hooks humacli.Hooks, options *WebServerFlags) {
 		// Create a new router & API
@@ -51,7 +50,6 @@ func webServerStart(flags *WebServerFlags) error {
 
 		// Add the operation handler to the API.
 		huma.Get(api, "/v1/apim/status", apimStatus)
-
 		huma.Post(api, "/v1/apim/sync", apimSync)
 
 		hooks.OnStart(func() {
@@ -67,10 +65,11 @@ func apimStatus(ctx context.Context, input *struct{}) (*ApimStatus, error) {
 	var status ApimStatus
 	apigeeFlags := ApigeeFlags{Project: os.Getenv("APIGEE_PROJECT"), Region: os.Getenv("APIGEE_REGION")}
 	azureFlags := AzureFlags{Subscription: os.Getenv("AZURE_SUBSCRIPTION_ID"), ResourceGroup: os.Getenv("AZURE_RESOURCE_GROUP"), ServiceName: os.Getenv("AZURE_SERVICE_NAME")}
+	awsFlags := AwsFlags{Region: os.Getenv("AWS_REGION"), AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"), AccessSecret: os.Getenv("AWS_SECRET_ACCESS_KEY")}
 	status.Body.ApigeeStatus = apigeeStatus(&apigeeFlags)
 	status.Body.ApiHubStatus = apiHubStatus(&apigeeFlags)
 	status.Body.AzureStatus = azureStatus(&azureFlags)
-	status.Body.AwsStatus = awsStatus(nil)
+	status.Body.AwsStatus = awsStatus(&awsFlags)
 
 	return &status, nil
 }
@@ -80,10 +79,14 @@ func apimSync(ctx context.Context, input *ApimSyncInput) (*ApimSyncOutput, error
 
 	apigeeFlags := ApigeeFlags{Project: os.Getenv("APIGEE_PROJECT"), Region: os.Getenv("APIGEE_REGION")}
 	azureFlags := AzureFlags{Subscription: os.Getenv("AZURE_SUBSCRIPTION_ID"), ResourceGroup: os.Getenv("AZURE_RESOURCE_GROUP"), ServiceName: os.Getenv("AZURE_SERVICE_NAME")}
+	awsFlags := AwsFlags{Region: os.Getenv("AWS_REGION"), AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"), AccessSecret: os.Getenv("AWS_SECRET_ACCESS_KEY")}
 
 	if input.Body.Offramp == "azure" {
 		azureExport(&azureFlags)
 		azureOfframp(&azureFlags)
+	} else if input.Body.Offramp == "aws" {
+		awsExport(&awsFlags)
+		awsOfframp(&awsFlags)
 	}
 
 	if input.Body.Onramp == "apihub" {
