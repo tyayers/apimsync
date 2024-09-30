@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/leaanthony/clir"
 )
@@ -60,13 +59,13 @@ func main() {
 	azureCommand := cli.NewSubCommand("azure", "Functions for Azure API Management.")
 	azureCommand.NewSubCommandFunction("export", "Exports Azure API Management service info.", azureServiceExport)
 	azureApisCommand := azureCommand.NewSubCommand("apis", "Functions for Azure API Management API resources.")
-	azureApisCommand.NewSubCommandFunction("export", "Exports Azure API Management APIs.", azureExport)
+	azureApisCommand.NewSubCommandFunction("export", "Exports Azure API Management APIs.", azureExportMin)
 	azureApisCommand.NewSubCommandFunction("offramp", "Migrates Azure API Management APIs out to general.", azureOfframp)
 	azureApisCommand.NewSubCommandFunction("cleanlocal", "Removes all exported Azure APIs from local storage.", azureCleanLocal)
 
 	awsCommand := cli.NewSubCommand("aws", "Functions for AWS API Gateway.")
 	awsApisCommand := awsCommand.NewSubCommand("apis", "Functions for AWS API Gateway API resources.")
-	awsApisCommand.NewSubCommandFunction("export", "Exports AWS API Gateway APIs.", awsExport)
+	awsApisCommand.NewSubCommandFunction("export", "Exports AWS API Gateway APIs.", awsExportMin)
 	awsApisCommand.NewSubCommandFunction("offramp", "Offramp AWS API Gateway APIs.", awsOfframp)
 	awsApisCommand.NewSubCommandFunction("cleanlocal", "Removes all exported AWS APIs from local storage.", awsCleanLocal)
 
@@ -76,10 +75,4 @@ func main() {
 		// We had an error
 		log.Fatal(err)
 	}
-}
-
-func generalCleanLocal(flags *GeneralFlags) error {
-	var baseDir = "src/main/general"
-	os.RemoveAll(baseDir)
-	return nil
 }

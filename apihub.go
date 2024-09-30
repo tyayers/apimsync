@@ -62,11 +62,6 @@ type HubApiVersion struct {
 	Deployments   []string            `json:"deployments"`
 }
 
-type HubApiVersionExtended struct {
-	HubApiVersion
-	BaseApiName string `json:"baseApiName"`
-}
-
 type HubAttribute struct {
 	Attribute  string                 `json:"attribute"`
 	EnumValues HubAttributeEnumValues `json:"enumValues"`
@@ -281,7 +276,7 @@ func apiHubOnramp(flags *ApigeeFlags) error {
 								// we have a spec file
 								var hubApiVersionSpec HubApiVersionSpec
 								hubApiVersionSpec.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + apiVersionName + "/specs/" + generalDeploymentApi.Name
-								hubApiVersionSpec.DisplayName = generalApi.DisplayName
+								hubApiVersionSpec.DisplayName = generalDeploymentApi.DisplayName + " (" + generalDeploymentApi.PlatformName + ")"
 								apiSpecType := HubAttributeValue{Id: "openapi", DisplayName: "OpenAPI Spec", Description: "OpenAPI Spec", Immutable: true}
 								hubApiVersionSpec.SpecType.EnumValues.Values = append(hubApiVersionSpec.SpecType.EnumValues.Values, apiSpecType)
 								hubApiVersionSpec.Contents.MimeType = "application/json"
@@ -296,11 +291,9 @@ func apiHubOnramp(flags *ApigeeFlags) error {
 
 				for k, v := range apiVersions {
 					// create API version
-					// we use the extended version here to include the BaseApiName that we use in apihub to connect the version to a base api
-					var hubApiVersion HubApiVersionExtended
-					hubApiVersion.BaseApiName = apiName
+					var hubApiVersion HubApiVersion
 					hubApiVersion.Name = "projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + apiName + "/versions/" + k
-					hubApiVersion.DisplayName = generalApi.DisplayName
+					hubApiVersion.DisplayName = v[0].DisplayName
 					hubApiVersion.Description = generalApi.Description
 					hubApiVersion.Documentation.ExternalUri = generalApi.DocumentationUrl
 
@@ -369,6 +362,11 @@ func apiHubImport(flags *ApigeeFlags) error {
 
 					if resp.StatusCode != 200 {
 						fmt.Println("  >> Error creating " + e.Name() + ": " + resp.Status)
+						//Read the response body
+						respBody, _ := io.ReadAll(resp.Body)
+						sb := string(respBody)
+						fmt.Println(sb)
+						defer resp.Body.Close()
 					}
 				} else {
 					fmt.Println("  >> Error, cloud not create API in API Hub because the definition file could not be found: " + e.Name() + ".json")
@@ -380,7 +378,6 @@ func apiHubImport(flags *ApigeeFlags) error {
 				fileEntries, _ := os.ReadDir(baseDir + "/" + e.Name())
 				for _, f := range fileEntries {
 					if strings.HasSuffix(f.Name(), "-aws.json") || strings.HasSuffix(f.Name(), "-azure.json") {
-						fmt.Println(f.Name())
 						apiDeploymentName := strings.ReplaceAll(f.Name(), ".json", "")
 						apiVersionName := strings.ReplaceAll(f.Name(), "-aws.json", "")
 						apiVersionName = strings.ReplaceAll(apiVersionName, "-azure.json", "")
@@ -397,17 +394,16 @@ func apiHubImport(flags *ApigeeFlags) error {
 							r.Header.Add("Content-Type", "application/json")
 							r.Header.Add("Authorization", "Bearer "+flags.Token)
 							client := &http.Client{}
-							fmt.Println("Creating deployment " + apiDeployment.Name + "...")
-							fmt.Println(deploymentUrl)
+							fmt.Println("Creating deployment " + apiDeploymentName + "..." + deploymentUrl)
 							resp, _ := client.Do(r)
 
 							if resp.StatusCode != 200 {
-								fmt.Println("  >> Error creating deployment " + apiDeployment.Name + ": " + resp.Status)
-								defer resp.Body.Close()
+								fmt.Println("  >> Error creating deployment " + apiDeploymentName + ": " + resp.Status)
 								//Read the response body
 								respBody, _ := io.ReadAll(resp.Body)
 								sb := string(respBody)
 								fmt.Println(sb)
+								defer resp.Body.Close()
 							}
 						}
 						defer deploymentFile.Close()
@@ -426,10 +422,9 @@ func apiHubImport(flags *ApigeeFlags) error {
 					// create API version
 					versionFile, err := os.Open(baseDir + "/" + e.Name() + "/" + k + ".json")
 					if err == nil {
-						var apiVersionExtended HubApiVersionExtended
+						var apiVersion HubApiVersion
 						byteValue, _ := io.ReadAll(versionFile)
-						json.Unmarshal(byteValue, &apiVersionExtended)
-						var apiVersion HubApiVersion = apiVersionExtended.HubApiVersion
+						json.Unmarshal(byteValue, &apiVersion)
 						bodyBytes, _ := json.Marshal(apiVersion)
 						requestBody := bytes.NewBuffer(bodyBytes)
 
@@ -438,16 +433,36 @@ func apiHubImport(flags *ApigeeFlags) error {
 						r.Header.Add("Content-Type", "application/json")
 						r.Header.Add("Authorization", "Bearer "+flags.Token)
 						client := &http.Client{}
-						fmt.Println("Creating API version " + e.Name() + "...")
+						fmt.Println("Creating API version " + k + "...")
 						resp, _ := client.Do(r)
 
 						if resp.StatusCode != 200 {
 							fmt.Println("  >> Error creating version " + e.Name() + ": " + resp.Status)
 							defer resp.Body.Close()
 							//Read the response body
-							// respBody, _ := io.ReadAll(resp.Body)
-							// sb := string(respBody)
-							// fmt.Println(sb)
+							respBody, _ := io.ReadAll(resp.Body)
+							sb := string(respBody)
+							fmt.Println(sb)
+
+							// update if it already exists, maybe we have a new version
+							if resp.StatusCode == 409 {
+								versionUrl = "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + e.Name() + "/versions/" + k + "?updateMask=deployments"
+								r, _ := http.NewRequest(http.MethodPatch, versionUrl, requestBody)
+								r.Header.Add("Content-Type", "application/json")
+								r.Header.Add("Authorization", "Bearer "+flags.Token)
+								client := &http.Client{}
+								fmt.Println("Patching API version " + k + "...")
+								resp, _ := client.Do(r)
+
+								if resp.StatusCode != 200 {
+									fmt.Println("  >> Error patching version " + k + ": " + resp.Status)
+									defer resp.Body.Close()
+									//Read the response body
+									respBody, _ := io.ReadAll(resp.Body)
+									sb := string(respBody)
+									fmt.Println(sb)
+								}
+							}
 						}
 					}
 					defer versionFile.Close()

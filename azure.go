@@ -99,6 +99,7 @@ type AzureFlags struct {
 	ServiceName   string `name:"name" description:"The Azure API Management service name."`
 	Token         string `name:"token" description:"The Azure access token to call Azure with."`
 	ApiName       string `name:"api" description:"A specific Azure API Management API."`
+	OnlyNew       bool   `name:"onlyNew" description:"If only newly discovered APIs should be processed."`
 }
 
 func azureStatus(flags *AzureFlags) PlatformStatus {
@@ -223,25 +224,30 @@ func azureServiceExport(flags *AzureFlags) error {
 		//bytes, _ := json.MarshalIndent(service, "", " ")
 		var result map[string]any
 		json.Unmarshal(bytes, &result)
-		bytes2, _ := json.MarshalIndent(result, "", " ")
+		bytes2, _ := json.MarshalIndent(result, "", "  ")
 		os.WriteFile(baseDir+"/"+flags.ServiceName+".json", bytes2, 0644)
 	}
 
 	return nil
 }
 
-func azureExport(flags *AzureFlags) error {
+func azureExportMin(flags *AzureFlags) error {
+	azureExport(flags)
+	return nil
+}
+
+func azureExport(flags *AzureFlags) ([]string, error) {
 	var baseDir = "src/main/azure/apiproxies"
 	var token string = flags.Token
 	if flags.Subscription == "" {
 		fmt.Println("No subscription given, cannot export Azure APIs.")
-		return nil
+		return []string{}, nil
 	} else if flags.ResourceGroup == "" {
 		fmt.Println("No resource group given, cannot export Azure APIs.")
-		return nil
+		return []string{}, nil
 	} else if flags.ServiceName == "" {
 		fmt.Println("No service name given, cannot export Azure APIs.")
-		return nil
+		return []string{}, nil
 	}
 
 	if token == "" {
@@ -256,7 +262,7 @@ func azureExport(flags *AzureFlags) error {
 
 			if client_id == "" || client_secret == "" || tenant_id == "" {
 				fmt.Println("No token sent and no client environment variables set, cannot export Azure APIs.")
-				return nil
+				return []string{}, nil
 			}
 
 			token = getAzureToken(client_id, client_secret, tenant_id)
@@ -264,39 +270,55 @@ func azureExport(flags *AzureFlags) error {
 
 		if token == "" {
 			fmt.Println("Could not get valid Azure token, cannot export Azure APIs.")
-			return nil
+			return []string{}, nil
 		}
 	}
 
 	fmt.Println("Exporting Azure APIs for service " + flags.ServiceName + "...")
 	apis := getAzureApis(flags.Subscription, flags.ResourceGroup, flags.ServiceName, token)
+	apiNames := []string{}
 	if len(apis.Value) > 0 {
 		for _, api := range apis.Value {
 			if (flags.ApiName == "" || flags.ApiName == api.Name) && !strings.Contains(api.Name, ";rev=") {
 				fmt.Println("Exporting " + api.Name + "...")
-				bytes, _ := json.MarshalIndent(api, "", " ")
 
 				var re = regexp.MustCompile(`(-v\d+)$`)
 				newName := re.ReplaceAllString(api.Name, "")
+				newApiName := api.Name
+				if api.Properties.ApiVersion != "" && !strings.HasSuffix(newApiName, api.Properties.ApiVersion) {
+					newApiName = api.Name + "-" + api.Properties.ApiVersion
+					api.Name = newApiName
+					api.Properties.DisplayName = api.Properties.DisplayName + " " + api.Properties.ApiVersion
+				}
 
-				// os.RemoveAll(baseDir + "/" + newName)
-				os.MkdirAll(baseDir+"/"+newName, 0755)
-				os.WriteFile(baseDir+"/"+newName+"/"+api.Name+".json", bytes, 0644)
+				if api.Properties.ApiVersion != "" && !strings.HasSuffix(api.Properties.DisplayName, api.Properties.ApiVersion) {
+					api.Properties.DisplayName = api.Properties.DisplayName + " " + api.Properties.ApiVersion
+				}
 
-				schema := getAzureApiSchema(flags.Subscription, flags.ResourceGroup, flags.ServiceName, api.Name, token)
+				_, fileExistsErr := os.Open(baseDir + "/" + newName + "/" + api.Name + ".json")
 
-				if schema.Id != "" {
-					bytes, _ := json.MarshalIndent(schema, "", " ")
-					os.WriteFile(baseDir+"/"+newName+"/"+api.Name+"-oas-definition.json", bytes, 0644)
+				if (flags.OnlyNew && fileExistsErr != nil) || !flags.OnlyNew {
+					bytes, _ := json.MarshalIndent(api, "", "  ")
 
-					doc_bytes := []byte(schema.Properties.Document)
-					os.WriteFile(baseDir+"/"+newName+"/"+api.Name+"-oas."+schema.Properties.SchemaType, doc_bytes, 0644)
+					os.MkdirAll(baseDir+"/"+newName, 0755)
+					os.WriteFile(baseDir+"/"+newName+"/"+newApiName+".json", bytes, 0644)
+					schema := getAzureApiSchema(flags.Subscription, flags.ResourceGroup, flags.ServiceName, newApiName, token)
+
+					if schema.Id != "" {
+						bytes, _ := json.MarshalIndent(schema, "", "  ")
+						os.WriteFile(baseDir+"/"+newName+"/"+newApiName+"-oas-definition.json", bytes, 0644)
+
+						doc_bytes := []byte(schema.Properties.Document)
+						os.WriteFile(baseDir+"/"+newName+"/"+newApiName+"-oas."+schema.Properties.SchemaType, doc_bytes, 0644)
+					}
+
+					apiNames = append(apiNames, api.Name)
 				}
 			}
 		}
 	}
 
-	return nil
+	return apiNames, nil
 }
 
 func getAzureToken(clientId string, clientSecret string, tenantId string) string {
@@ -443,18 +465,19 @@ func azureOfframp(flags *AzureFlags) error {
 						generalApi.Version = azureApi.Properties.ApiVersion
 						generalApi.OwnerEmail = azureService.Properties.PublisherEmail
 						generalApi.OwnerName = azureService.Properties.PublisherName
-						generalApi.DocumentationUrl = azureService.Properties.DeveloperPortalUrl + "/api-details#api=" + e.Name()
+						generalApi.DocumentationUrl = azureService.Properties.DeveloperPortalUrl + "/api-details#api=" + azureApi.Name
 						generalApi.GatewayUrl = azureService.Properties.GatewayUrl + "/" + azureApi.Properties.Path
 						generalApi.BasePath = azureApi.Properties.Path
 						generalApi.PlatformId = "azure-api-management"
 						generalApi.PlatformName = "Azure API Management"
-						generalApi.PlatformResourceUri = "https://portal.azure.com/#resource/subscriptions/" + flags.Subscription + "/resourceGroups/" + flags.ResourceGroup + "/providers/Microsoft.ApiManagement/service/" + flags.ServiceName + "/overview?apiName=" + e.Name()
+						generalApi.PlatformResourceUri = "https://portal.azure.com/#resource/subscriptions/" + flags.Subscription + "/resourceGroups/" + flags.ResourceGroup + "/providers/Microsoft.ApiManagement/service/" + flags.ServiceName + "/overview?apiName=" + azureApi.Name
 
-						bytes, _ := json.MarshalIndent(generalApi, "", " ")
+						bytes, _ := json.MarshalIndent(generalApi, "", "  ")
 						//os.RemoveAll(baseDir + "/" + generalApi.Name)
 						os.MkdirAll(baseDir+"/"+e.Name(), 0755)
 
-						os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						//os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						writeGeneralApi(e.Name(), generalApi)
 						os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+".json", bytes, 0644)
 
 						schemaFile, err := os.Open(azureBaseDir + "/" + e.Name() + "/" + azureApi.Name + "-oas.json")

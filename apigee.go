@@ -206,7 +206,7 @@ func apigeeExport(flags *ApigeeFlags) error {
 
 		if flags.Environment != "" {
 			// write deployments.json
-			bytes, _ := json.MarshalIndent(environment, "", " ")
+			bytes, _ := json.MarshalIndent(environment, "", "  ")
 			os.WriteFile("src/main/apigee/environments/"+flags.Environment+"/deployments.json", bytes, 0644)
 		}
 	}
@@ -496,7 +496,7 @@ func initApigeeTest(flags *ApigeeFlags) error {
 	os.MkdirAll("src/main/apigee/tests/"+flags.Environment, 0755)
 
 	// write developers
-	bytes, _ := json.MarshalIndent(developers, "", " ")
+	bytes, _ := json.MarshalIndent(developers, "", "  ")
 	os.WriteFile("src/main/apigee/tests/"+flags.Environment+"/developers.json", bytes, 0644)
 
 	for _, proxy := range environment.Proxies {
@@ -504,11 +504,11 @@ func initApigeeTest(flags *ApigeeFlags) error {
 	}
 
 	// write products
-	bytes, _ = json.MarshalIndent(products, "", " ")
+	bytes, _ = json.MarshalIndent(products, "", "  ")
 	os.WriteFile("src/main/apigee/tests/"+flags.Environment+"/products.json", bytes, 0644)
 
 	// write apps
-	bytes, _ = json.MarshalIndent(apps, "", " ")
+	bytes, _ = json.MarshalIndent(apps, "", "  ")
 	os.WriteFile("src/main/apigee/tests/"+flags.Environment+"/developerapps.json", bytes, 0644)
 
 	return nil

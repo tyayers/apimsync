@@ -52,6 +52,7 @@ type AwsFlags struct {
 	AccessSecret string `name:"accessSecret" description:"The AWS secret key to use to authenticate with AWS."`
 	Region       string `name:"region" description:"The AWS region of the API Gateway."`
 	ApiName      string `name:"api" description:"A specific Azure API Management API."`
+	OnlyNew      bool   `name:"onlyNew" description:"If only newly discovered APIs should be processed."`
 }
 
 func awsCleanLocal(flags *AwsFlags) error {
@@ -92,13 +93,18 @@ func awsStatus(flags *AwsFlags) PlatformStatus {
 	return status
 }
 
-func awsExport(flags *AwsFlags) error {
+func awsExportMin(flags *AwsFlags) error {
+	awsExport(flags)
+	return nil
+}
+
+func awsExport(flags *AwsFlags) ([]string, error) {
 	var baseDir = "src/main/aws/apiproxies"
 	if flags.Region == "" {
 		flags.Region = os.Getenv("AWS_REGION")
 		if flags.Region == "" {
 			fmt.Println("No region given, cannot export AWS APIs.")
-			return nil
+			return nil, nil
 		}
 	}
 
@@ -108,12 +114,12 @@ func awsExport(flags *AwsFlags) error {
 	}
 
 	client := apigatewayv2.NewFromConfig(cfg)
+	apiNames := []string{}
 
 	if client != nil {
 		fmt.Println("Exporting AWS APIs for region " + flags.Region + "...")
 
 		apis, _ := client.GetApis(context.TODO(), &apigatewayv2.GetApisInput{})
-
 		if apis != nil {
 			if len(apis.Items) > 0 {
 				for _, api := range apis.Items {
@@ -131,43 +137,42 @@ func awsExport(flags *AwsFlags) error {
 							fmt.Println(exportErr)
 						}
 
-						bytes, _ := json.MarshalIndent(api, "", " ")
-
+						bytes, _ := json.MarshalIndent(api, "", "  ")
 						newName := strings.ReplaceAll(strings.ToLower(*api.Name), " ", "-")
 
 						var re = regexp.MustCompile(`(-v\d+)$`)
 						newName2 := re.ReplaceAllString(newName, "")
 
-						// newName2 := newName
-						// if *api.Version != "" {
-						// 	newName2 += "-v" + strings.Split(*api.Version, ".")[0]
-						// }
+						_, fileExistsErr := os.Open(baseDir + "/" + newName2 + "/" + newName + ".json")
 
-						fmt.Println(newName2)
-						fmt.Println(newName)
+						if (flags.OnlyNew && fileExistsErr != nil) || !flags.OnlyNew {
+							os.MkdirAll(baseDir+"/"+newName2, 0755)
+							writeError := os.WriteFile(baseDir+"/"+newName2+"/"+newName+".json", bytes, 0644)
+							if writeError != nil {
+								fmt.Println(writeError)
+							}
+							if apiExport != nil && apiExport.Body != nil {
+								os.WriteFile(baseDir+"/"+newName2+"/"+newName+"-oas.json", apiExport.Body, 0644)
+							}
 
-						os.RemoveAll(baseDir + "/" + newName)
-						os.MkdirAll(baseDir+"/"+newName2, 0755)
-						os.WriteFile(baseDir+"/"+newName2+"/"+newName+".json", bytes, 0644)
-						if apiExport != nil && apiExport.Body != nil {
-							os.WriteFile(baseDir+"/"+newName2+"/"+newName+"-oas.json", apiExport.Body, 0644)
+							apiNames = append(apiNames, newName)
 						}
 					}
 				}
 			} else {
 				fmt.Println("No AWS APIs found in region " + flags.Region + ", cannot export APIs.")
-				return nil
+				return nil, nil
 			}
 		} else {
 			fmt.Println("No valid APIs found in region " + flags.Region + ", cannot export APIs.")
-			return nil
+			return nil, nil
 		}
 	} else {
 		fmt.Println("AWS client could not be created, cannot export APIs.")
-		return nil
+		return nil, nil
 	}
 
-	return nil
+	return apiNames, nil
 }
 
 func awsOfframp(flags *AwsFlags) error {
@@ -212,11 +217,12 @@ func awsOfframp(flags *AwsFlags) error {
 						generalApi.PlatformName = "AWS API Gateway"
 						generalApi.PlatformResourceUri = "https://" + flags.Region + ".console.aws.amazon.com/apigateway/main/apis?api=" + *awsApi.ApiId
 
-						bytes, _ := json.MarshalIndent(generalApi, "", " ")
+						bytes, _ := json.MarshalIndent(generalApi, "", "  ")
 						//os.RemoveAll(baseDir + "/" + generalApi.Name)
 						os.MkdirAll(baseDir+"/"+e.Name(), 0755)
 
-						os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						//os.WriteFile(baseDir+"/"+e.Name()+"/"+e.Name()+".json", bytes, 0644)
+						writeGeneralApi(e.Name(), generalApi)
 						os.WriteFile(baseDir+"/"+e.Name()+"/"+generalApi.Name+".json", bytes, 0644)
 
 						schemaFile, err := os.Open(awsBaseDir + "/" + e.Name() + "/" + baseName + "-oas.json")
