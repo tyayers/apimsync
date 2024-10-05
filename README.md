@@ -59,3 +59,16 @@ cd apimsync
 go build
 # run apimsync command
 ```
+
+## Deploy service to Google Cloud Run
+
+It's quite simple to deploy the service to Google Cloud Run using the `gcloud` CLI.
+
+```sh
+# first update the 1.env.sh file with your own environment variables to authenticate to Azure & AWS,
+# and then source the updated file.
+source 1.env.sh
+
+# then make sure you are authenticated to gcloud, and call the deployment script.
+./2.deploy.service.sh
+```

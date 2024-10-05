@@ -444,8 +444,9 @@ func apiHubImport(flags *ApigeeFlags) error {
 							sb := string(respBody)
 							fmt.Println(sb)
 
-							// update if it already exists, maybe we have a new version
+							// update if it already exists, maybe we have a new version deployment...
 							if resp.StatusCode == 409 {
+								requestBody = bytes.NewBuffer(bodyBytes)
 								versionUrl = "https://apihub.googleapis.com/v1/projects/" + flags.Project + "/locations/" + flags.Region + "/apis/" + e.Name() + "/versions/" + k + "?updateMask=deployments"
 								r, _ := http.NewRequest(http.MethodPatch, versionUrl, requestBody)
 								r.Header.Add("Content-Type", "application/json")
@@ -453,7 +454,6 @@ func apiHubImport(flags *ApigeeFlags) error {
 								client := &http.Client{}
 								fmt.Println("Patching API version " + k + "...")
 								resp, _ := client.Do(r)
-
 								if resp.StatusCode != 200 {
 									fmt.Println("  >> Error patching version " + k + ": " + resp.Status)
 									defer resp.Body.Close()
